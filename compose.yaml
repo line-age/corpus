@@ -1,0 +1,43 @@
+name: corpus
+
+services:
+  corpus-api:
+    build:
+      context: .
+      target: dev
+    image: corpus-api:dev
+    env_file: .env
+    ports:
+      - "${FORWARD_API_PORT:-9001}:${API_PORT:-9001}"
+    volumes:
+      # Live code; the virtualenv lives at /opt/venv, outside the mount.
+      - .:/app
+    depends_on:
+      corpus-db:
+        condition: service_healthy
+    networks:
+      - lineage
+    restart: unless-stopped
+
+  corpus-db:
+    image: pgvector/pgvector:0.8.7-pg18
+    # Reads POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB, the same values the API uses.
+    env_file: .env
+    volumes:
+      - corpus-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - lineage
+    restart: unless-stopped
+
+volumes:
+  corpus-db-data:
+
+networks:
+  lineage:
+    name: lineage
+    driver: bridge
