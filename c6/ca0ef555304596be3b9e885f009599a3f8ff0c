@@ -1,0 +1,155 @@
+src/corpus/api/modules/__init__.py
+  s_3cd7550dca810e::t_a2ef25d02b953f 1
+Dockerfile
+  h_3b7e0f61390819 5,22,41,47
+  s_3cd7550dca810e::t_bb0c2b0b619468 53-55
+  s_3cd7550dca810e::t_34dec5e63bb395 1-4,6-21,23-40,42-46,48-52
+src/corpus/api/modules/health/exceptions.py
+  h_3b7e0f61390819 1-6
+src/corpus/db.py
+  s_3cd7550dca810e::t_14052db1a190cb 26-61
+  s_3cd7550dca810e::t_6db7c74e21c49b 18-19
+  s_3cd7550dca810e::t_a87e1b09554aa1 1-10,12-17,20-22
+  h_3b7e0f61390819 11
+  s_3cd7550dca810e::t_ad073b61133e7b 23-25
+tests/test_health.py
+  s_3cd7550dca810e::t_f777dd4581fdec 1-38
+src/corpus/lib/__init__.py
+  s_3cd7550dca810e::t_537ed61d305c2f 1
+alembic.ini
+  s_3cd7550dca810e::t_ba222d3e5149ea 1-41
+src/corpus/api/modules/health/__init__.py
+  s_3cd7550dca810e::t_056c47789d83ca 1
+tests/test_docs.py
+  s_3cd7550dca810e::t_36e9209d434f19 1-16
+  s_3cd7550dca810e::t_6db39bbd767750 17
+tests/test_db.py
+  s_3cd7550dca810e::t_b36bc386baf0c5 1-23
+src/corpus/config.py
+  s_3cd7550dca810e::t_e47bcbfca68018 1-7,11-25,36-48
+  h_3b7e0f61390819 8,49-51
+  s_3cd7550dca810e::t_b446ef0226acca 52-65
+  s_3cd7550dca810e::t_f832c2edc52543 9-10
+  s_3cd7550dca810e::t_c800eb8f2e9424 26-35
+  s_3cd7550dca810e::t_cc64d4a622ebd6 66-68
+  s_3cd7550dca810e::t_2063b57f6d374f 69-80
+src/corpus/api/modules/search/service.py
+  s_3cd7550dca810e::t_9a1d31afa7b0ea 1-8
+migrations/script.py.mako
+  s_3cd7550dca810e::t_b5f9f3736eae9b 1-25
+migrations/env.py
+  s_3cd7550dca810e::t_9066f55e2d28df 1-46
+src/corpus/api/modules/health/router.py
+  s_3cd7550dca810e::t_9ef29a213fadca 1-41
+src/corpus/api/modules/search/__init__.py
+  s_3cd7550dca810e::t_906012a6a8cb90 1
+pyproject.toml
+  s_3cd7550dca810e::t_86578f3d831bec 1-17,19-28
+  s_3cd7550dca810e::t_8bc004a8597f90 18
+README.md
+  s_3cd7550dca810e::t_8b66af3afe736b 82
+  s_3cd7550dca810e::t_f06a0b7f6ca787 64-65
+  s_3cd7550dca810e::t_76967b719695ae 88-90,99
+  s_3cd7550dca810e::t_cd5d9fe76a572c 14-63,66-81,83-87
+  s_3cd7550dca810e::t_cf6c4344ebf461 91-93,96-98
+  s_3cd7550dca810e::t_e7f762730247cc 100-102
+  s_3cd7550dca810e::t_8addb5a24067bc 94-95,103-107
+src/corpus/api/modules/search/exceptions.py
+  h_3b7e0f61390819 1-6
+compose.yaml
+  s_3cd7550dca810e::t_3ac50bc7b78654 1-10,12-43
+  h_3b7e0f61390819 11
+src/corpus/api/modules/search/router.py
+  s_3cd7550dca810e::t_4c8db57259604a 1-17
+.env.example
+  s_3cd7550dca810e::t_bdb97878bb1f78 24-26
+  s_3cd7550dca810e::t_6ee3c0396fe60c 1-19
+  s_3cd7550dca810e::t_5c10f6331046c0 20-23
+  s_3cd7550dca810e::t_8f911e14b0554d 27-28
+tests/test_index.py
+  s_3cd7550dca810e::t_3899584943b0db 1-17
+  s_3cd7550dca810e::t_5a3619cedacde1 18
+  s_3cd7550dca810e::t_fd82c44081246b 19-21
+  s_3cd7550dca810e::t_9de620ce5215e3 22
+src/corpus/api/main.py
+  s_3cd7550dca810e::t_24c474fc47c75d 1-8,11-20,22,26-29,31-58
+  s_3cd7550dca810e::t_05c2e3b7735b9e 59-61
+  h_3b7e0f61390819 9-10,21,23-25,30
+  s_3cd7550dca810e::t_5a7cccac835957 62
+src/corpus/lib/logger.py
+  h_3b7e0f61390819 1-31
+  s_3cd7550dca810e::t_0a8b3e43ff5ac7 32-63
+src/corpus/ingestion/.gitkeep
+  h_3b7e0f61390819 1
+src/corpus/api/__init__.py
+  s_3cd7550dca810e::t_4257333e4d3f47 1
+tests/test_health_service.py
+  h_3b7e0f61390819 1-37
+tests/conftest.py
+  s_3cd7550dca810e::t_6abf294f0bf984 1-47
+  s_3cd7550dca810e::t_ab84f79648bc3d 48-60
+  s_3cd7550dca810e::t_60b62f4283fdfd 61-63
+  s_3cd7550dca810e::t_cb5ab1d102acc9 64-103
+Makefile
+  s_3cd7550dca810e::t_0f78a59f963918 1-32
+.gitignore
+  s_3cd7550dca810e::t_88a74f21167746 1-13
+  s_6fc6d039027e55::t_5d8370e3154333 14-16
+tests/test_config.py
+  s_3cd7550dca810e::t_88030f61480e1c 24-26
+  s_3cd7550dca810e::t_60e766ea712dac 27-32
+  s_3cd7550dca810e::t_9295fd1783762d 1-23
+src/corpus/__init__.py
+  s_3cd7550dca810e::t_b3278f05b1a4a5 1-5
+.dockerignore
+  s_3cd7550dca810e::t_5ab7499d172db2 1-12
+src/corpus/api/modules/search/dto.py
+  s_3cd7550dca810e::t_388f75928ac8f7 1
+src/corpus/api/modules/health/dto.py
+  s_3cd7550dca810e::t_67b1d49a08b3ca 1-19
+uv.lock
+  s_3cd7550dca810e::t_83f756ca46f55a 1-1028
+migrations/versions/2026_11_12_0001_enable_pgvector.py
+  s_3cd7550dca810e::t_333c5f4db5925f 1-23
+src/corpus/api/modules/search/repository.py
+  s_3cd7550dca810e::t_82dc1df736b10e 1-8
+src/corpus/api/middlewares/__init__.py
+  s_3cd7550dca810e::t_741364ac562625 1
+src/corpus/api/middlewares/request_logger.py
+  s_3cd7550dca810e::t_15ba5653c31545 1-57
+src/corpus/api/modules/health/service.py
+  s_3cd7550dca810e::t_247512d5bcfb90 1-68
+tests/test_logger.py
+  s_3cd7550dca810e::t_a0be5ada6765cf 1-55
+tests/test_request_logger.py
+  s_3cd7550dca810e::t_0a3eba823f187c 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "c6ca0ef555304596be3b9e885f009599a3f8ff0c",
+  "prompts": {},
+  "humans": {
+    "h_3b7e0f61390819": {
+      "author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  },
+  "sessions": {
+    "s_3cd7550dca810e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3294d995-a9b9-4c5c-8ae5-56eebd630c65",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    },
+    "s_6fc6d039027e55": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "69ec2a12-3789-4abf-ab08-56d78232acb4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  }
+}
