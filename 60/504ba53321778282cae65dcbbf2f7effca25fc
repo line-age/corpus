@@ -1,0 +1,19 @@
+Makefile
+  s_5969ee9c0872f0::t_bcc97108ac0142 7-16,22,24,27,30,33,36,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "60504ba53321778282cae65dcbbf2f7effca25fc",
+  "prompts": {},
+  "sessions": {
+    "s_5969ee9c0872f0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3a35271b-acd9-4e6c-b38a-6bbc0419d896",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  }
+}
