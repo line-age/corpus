@@ -1,0 +1,19 @@
+.claude/skills/write-pr-description/SKILL.md
+  s_68c3e3e6d631e6::t_ea57c4114606f5 1-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "168cd725a6879cdaa03b7207af1a1280e8339063",
+  "prompts": {},
+  "sessions": {
+    "s_68c3e3e6d631e6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a217e16c80b632e69",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  }
+}
