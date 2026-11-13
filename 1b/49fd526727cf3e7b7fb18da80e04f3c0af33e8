@@ -1,0 +1,24 @@
+compose.yaml
+  s_d649cdc21b0701::t_731048d19601ca 29-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "1b49fd526727cf3e7b7fb18da80e04f3c0af33e8",
+  "prompts": {},
+  "humans": {
+    "h_3b7e0f61390819": {
+      "author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  },
+  "sessions": {
+    "s_d649cdc21b0701": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c1289716-2703-497f-b0df-0b07e2a8f533",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  }
+}
