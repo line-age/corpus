@@ -1,7 +1,12 @@
 """Database queries behind the health checks.
 
-Each method opens its own connection rather than sharing a session, so the checks can run
-concurrently: an AsyncSession must not be used by two tasks at once.
+- Each method opens its own connection because HealthService runs the checks concurrently,
+  and concurrent tasks can't share a connection or an AsyncSession.
+- The database and pgvector checks are separate so /healthz says which problem to fix:
+  "database" fails when Postgres can't be reached, "pgvector" when it can but the vector
+  extension isn't installed (the database hasn't been migrated).
+- get_pgvector_version() alone would prove the database is reachable. ping() exists so each
+  check is independent, with its own timeout and latency.
 """
 
 from sqlalchemy import text

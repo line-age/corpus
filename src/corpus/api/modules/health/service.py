@@ -47,22 +47,31 @@ class HealthService:
 
     async def _run(self, name: str, check: Check) -> CheckResult:
         start = time.perf_counter()
-
-        def result(state: Status, detail: str | None) -> CheckResult:
-            latency = round((time.perf_counter() - start) * 1000, 2)
-            return CheckResult(status=state, latency_ms=latency, detail=detail)
-
+        state: Status
+        detail: str | None
+        deadline = asyncio.timeout(self._timeout)
         try:
-            async with asyncio.timeout(self._timeout):
+            async with deadline:
                 detail = await check()
+            state = "ok"
         except CheckFailed as exc:
-            return result("error", str(exc))
-        except TimeoutError:
-            logger.warning(
-                "health check %r timed out after %ss", name, self._timeout, extra={"check": name}
-            )
-            return result("error", f"timed out after {self._timeout:g}s")
+            state, detail = "error", str(exc)
         except Exception as exc:
-            logger.warning("health check %r failed", name, exc_info=True, extra={"check": name})
-            return result("error", type(exc).__name__)
-        return result("ok", detail)
+            state = "error"
+            # Only this deadline is a timeout. A TimeoutError from inside the check, such as
+            # a socket's or a nested asyncio timeout's, is an ordinary failure.
+            if isinstance(exc, TimeoutError) and deadline.expired():
+                logger.warning(
+                    "health check %r timed out after %ss",
+                    name,
+                    self._timeout,
+                    extra={"check": name},
+                )
+                detail = f"timed out after {self._timeout:g}s"
+            else:
+                logger.warning(
+                    "health check %r failed", name, exc_info=True, extra={"check": name}
+                )
+                detail = type(exc).__name__
+        latency = round((time.perf_counter() - start) * 1000, 2)
+        return CheckResult(status=state, latency_ms=latency, detail=detail)
