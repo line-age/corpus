@@ -17,8 +17,6 @@ team lead is [@FlorenceEgwu](https://github.com/FlorenceEgwu). If that changes, 
 
 ## Running it
 
-Everything runs in Docker; the only host requirements are Docker (with Compose) and `make`.
-
 ```sh
 make setup        # build the images and start the API and Postgres (pgvector)
 make db-migrate   # apply migrations, including enabling the vector extension
@@ -58,4 +56,4 @@ startup and shutdown messages. Every line has `time` (UTC), `level`, `logger` an
 ```json
 {"time": "2026-11-12T15:23:42.861Z", "level": "INFO", "logger": "corpus", "message": "GET /healthz 200 16.5ms", "method": "GET", "path": "/healthz", "status": 200, "duration_ms": 16.5}
 ```
-\
+

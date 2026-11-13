@@ -58,7 +58,7 @@ wired but empty.
 | File | Holds | Rules |
 | --- | --- | --- |
 | `router.py` | `APIRouter`, endpoints, and dependency providers such as `get_search_service` | The only layer that imports FastAPI. Turns results and errors into HTTP responses and status codes. |
-| `service.py` | Business logic, as a plain class that takes its repository in `__init__` | No FastAPI, no SQL. Unit-testable with a fake repository. |
+| `service.py` | Business logic, as a plain class that takes its repository in `__init__` | No FastAPI, no SQL. Unit-testable with a mocked repository. |
 | `repository.py` | Database queries, as a class that takes an `AsyncSession` | Queries only, no business rules. |
 | `dto.py` | Pydantic request and response models | Endpoints declare their return type with these. |
 | `exceptions.py` | The feature's exceptions | A message that reaches a client must be safe to show (no hostnames or driver errors). |
@@ -91,7 +91,6 @@ checks are the one case; each method opens its own connection.
      validators).
   2. Add it to `.env.example` **and** to the local `.env` in the same change. Keep any
      values already set in `.env`.
-  3. Add a row to the Configuration table in the README.
 - `API_PORT` and `FORWARD_API_PORT` are read by compose and the Dockerfile, not by the app,
   so they are not `Settings` fields. They are only ever set in `.env`.
 
@@ -140,7 +139,7 @@ is safe to show a client; any other exception is reported by its type name only.
     before it, because apps read settings when they are created.
   - `migrated_db` and `bare_db` point settings at the two test databases.
 - Patterns to copy:
-  - Test a service with a fake repository: `test_health_service.py`.
+  - Test a service with a mocked repository, `create_autospec(<Repository>, instance=True)`: `test_health_service.py`.
   - Test an endpoint with `make_client()`: `test_health.py`.
   - Test a dependency by mounting a temporary route: `test_db.py`.
 - Cover failure paths as well as the happy path. Tests must not depend on order; the
@@ -157,6 +156,10 @@ is safe to show a client; any other exception is reported by its type name only.
     running as a non-root user.
 - Both start uvicorn with `sh -c "exec uvicorn ..."` on `$API_PORT` and `--no-access-log`.
   Keep the `exec`; without it uvicorn is not PID 1 and never receives SIGTERM.
+- The arguments both targets share are in the `UVICORN_ARGS` build arg at the top of the
+  `Dockerfile`. They include `--factory corpus.api.main:create_app`, so uvicorn builds the
+  app when it starts. Don't add a module-level `app = create_app()`: every import of
+  `main.py`, including the tests', would build one from the ambient environment.
 
 ## Before you finish
 
