@@ -1,0 +1,26 @@
+src/corpus/api/modules/health/repository.py
+  h_3b7e0f61390819 3-9
+src/corpus/api/modules/health/service.py
+  s_d649cdc21b0701::t_0135cc93fb6d1f 50-52,54,56,58,60-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "ca71e5b2fc11917938a79d2a2815e7a600b2a0ec",
+  "prompts": {},
+  "humans": {
+    "h_3b7e0f61390819": {
+      "author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  },
+  "sessions": {
+    "s_d649cdc21b0701": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c1289716-2703-497f-b0df-0b07e2a8f533",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  }
+}
