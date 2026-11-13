@@ -44,15 +44,12 @@ def _recreate_database(name: str) -> None:
 
 @pytest.fixture(scope="session")
 def _migrated_db_name() -> str:
-    name = f"{get_settings().postgres_db}_test"
+    settings = get_settings()
+    name = f"{settings.postgres_db}_test"
     _recreate_database(name)
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setenv("POSTGRES_DB", name)
-        get_settings.cache_clear()
-        try:
-            command.upgrade(Config(str(ROOT / "alembic.ini")), "head")
-        finally:
-            get_settings.cache_clear()
+    config = Config(str(ROOT / "alembic.ini"))
+    config.attributes["url"] = settings.database_url.set(database=name)
+    command.upgrade(config, "head")
     return name
 
 
