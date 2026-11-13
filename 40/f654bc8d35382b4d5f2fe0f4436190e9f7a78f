@@ -1,0 +1,61 @@
+Dockerfile
+  s_d649cdc21b0701::t_1add8a1a6cf464 9-12,44-49,62-65
+  h_3b7e0f61390819 8
+src/corpus/api/modules/health/service.py
+  s_d649cdc21b0701::t_409b1f2257f616 55,57,62-71
+.dockerignore
+  h_3b7e0f61390819 13
+tests/test_health_service.py
+  s_d649cdc21b0701::t_40e129d384f25b 1,4,6,8-9,12-19,22-24,26,28,36-40,42,46-55
+  h_3b7e0f61390819 41
+tests/test_request_logger.py
+  h_3b7e0f61390819 13-14
+alembic.ini
+  s_382a6bdef71e43::t_23d0c72b6659a3 2-3
+README.md
+  h_3b7e0f61390819 59
+tests/conftest.py
+  s_382a6bdef71e43::t_93d844f3ff3be7 47-48,50-52
+AGENTS.md
+  s_d649cdc21b0701::t_fe09e0c3e446fb 61,142,159-162
+migrations/env.py
+  s_3cd7550dca810e::t_9066f55e2d28df 2
+  s_382a6bdef71e43::t_c94c6be0b1af70 1,3-10,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "40f654bc8d35382b4d5f2fe0f4436190e9f7a78f",
+  "prompts": {},
+  "humans": {
+    "h_3b7e0f61390819": {
+      "author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  },
+  "sessions": {
+    "s_382a6bdef71e43": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f510774d-5458-4e1b-a977-960c53e578fd",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    },
+    "s_3cd7550dca810e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3294d995-a9b9-4c5c-8ae5-56eebd630c65",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    },
+    "s_d649cdc21b0701": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c1289716-2703-497f-b0df-0b07e2a8f533",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  }
+}
