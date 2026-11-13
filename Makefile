@@ -30,11 +30,11 @@ up: .env
 down:
 	$(COMPOSE) down
 
-test: .env
+test: build
 	$(COMPOSE) run --rm $(API) pytest $(ARGS)
 
-db-migrate: .env
+db-migrate: build
 	$(COMPOSE) run --rm $(API) alembic upgrade head
 
-lock: .env
+lock: build
 	$(COMPOSE) run --rm --no-deps $(API) uv lock
