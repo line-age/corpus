@@ -1,0 +1,16 @@
+# pub_pipeline-gas-journal sample, drawn 2026-11-09 with a fixed seed
+sim_pipeline-gas-journal_1859-08-01_1_2   # no printed page numbers detected
+sim_pipeline-gas-journal_1867-08-16_9_4
+sim_pipeline-gas-journal_january-02-june-16-1879_30_index   # index; one leaf duplicated
+sim_pipeline-gas-journal_july-03-december-16-1882_37_index  # index; one leaf duplicated
+sim_pipeline-gas-journal_1894-10-29_61_18
+sim_pipeline-gas-journal_1900-09-10_73_11
+sim_pipeline-gas-journal_1912-01-08_96_2
+sim_pipeline-gas-journal_1922_116_index
+sim_pipeline-gas-journal_1932-03_136_3
+sim_pipeline-gas-journal_1938-08_149_2
+sim_pipeline-gas-journal_1942-06_156_6
+sim_pipeline-gas-journal_1946-12_165_6
+sim_pipeline-gas-journal_1952-08_177_2
+sim_pipeline-gas-journal_1956-02_46   # American Gas Merchandising: classified other
+sim_pipeline-gas-journal_1960-08-15_187_9
