@@ -21,8 +21,7 @@ class Stage:
     version: int
 
 
-# Bump a stage's version when its output changes; items done at an older version re-run,
-# and everything downstream of an item is invalidated whenever a stage completes for it.
+# Bump a stage's version when its output changes: items done at an older version re-run.
 STAGES: tuple[Stage, ...] = (
     Stage("enumerate", None, 1),
     Stage("classify", "enumerate", 1),
@@ -34,12 +33,7 @@ STAGES: tuple[Stage, ...] = (
     Stage("index", "passages", 1),
 )
 BY_NAME = {s.name: s for s in STAGES}
-
-
 _NAMES = [s.name for s in STAGES]
-
-# Stages that only run on items inside the corpus window (corpus_core.collections). The ones
-# before them run on every listed item, so out-of-window items still get a kind and lanes.
 WINDOWED_STAGES = tuple(_NAMES[_NAMES.index("mirror") :])
 
 
@@ -48,8 +42,8 @@ def downstream(stage: str) -> list[str]:
 
 
 def _clears_passages(stage: str, ok: bool) -> bool:
-    """Passages copy kind and lanes from the item, so any change before them, and any failure up
-    to and including them, withdraws the item's passages from search until they are rebuilt."""
+    """Passages copy kind and lanes from the item, so they are withdrawn when anything before
+    them changes or they fail."""
     i, p = _NAMES.index(stage), _NAMES.index("passages")
     return i < p or (i == p and not ok)
 
@@ -74,8 +68,6 @@ class Repo:
         self.engine = engine
         self.max_attempts = max_attempts
 
-    # ---- publications and items -------------------------------------------------
-
     def ensure_publication(self, collection: str, name: str, tier: int) -> None:
         stmt = pg_insert(db.publication).values(
             collection=collection, name=name, authority_tier=tier
@@ -87,8 +79,8 @@ class Repo:
             c.execute(stmt)
 
     def upsert_items(self, collection: str, rows: Iterable[dict[str, Any]]) -> list[str]:
-        """Insert new items and update changed ones. Returns the identifiers inserted or changed;
-        unchanged rows are left alone so their downstream progress survives a re-enumeration."""
+        """Insert new items and update changed ones; returns the identifiers inserted or changed.
+        Unchanged rows are left alone so their progress survives a re-enumeration."""
         vals = [
             {
                 "identifier": r["identifier"],
@@ -115,7 +107,6 @@ class Repo:
             return list(c.execute(stmt).scalars())
 
     def without_stage(self, identifiers: Sequence[str], stage: str) -> list[str]:
-        """Those of the identifiers that have no row at all for a stage."""
         if not identifiers:
             return []
         q = select(db.item.c.identifier).where(
@@ -142,8 +133,6 @@ class Repo:
     def update_item(self, identifier: str, **values: Any) -> None:
         with self.engine.begin() as c:
             c.execute(update(db.item).where(db.item.c.identifier == identifier).values(**values))
-
-    # ---- stage bookkeeping ------------------------------------------------------
 
     def pending(
         self,
@@ -179,7 +168,7 @@ class Repo:
             q = q.where(_in_window(db.item.c.issue_date))
         if collection:
             q = q.where(db.item.c.collection == collection)
-        if identifiers is not None:  # an empty list selects nothing, not everything
+        if identifiers is not None:
             q = q.where(db.item.c.identifier.in_(list(identifiers)))
         q = q.order_by(db.item.c.identifier)
         if limit:
@@ -195,7 +184,6 @@ class Repo:
         error: str | None = None,
         conn: Connection | None = None,
     ) -> None:
-        """Record a stage outcome. Pass `conn` to make it part of the caller's transaction."""
         if conn is None:
             with self.engine.begin() as c:
                 self._mark(c, identifier, stage, ok, error)
@@ -235,10 +223,7 @@ class Repo:
         if _clears_passages(stage, ok):
             c.execute(delete(db.passage).where(db.passage.c.identifier == identifier))
 
-    # ---- pages and passages -----------------------------------------------------
-
     def replace_pages_and_mark(self, identifier: str, pages: Sequence[Page], version: int) -> None:
-        """New pages and the stage's done mark land together or not at all."""
         with self.engine.begin() as c:
             c.execute(delete(db.passage).where(db.passage.c.identifier == identifier))
             c.execute(delete(db.page).where(db.page.c.identifier == identifier))
@@ -311,16 +296,12 @@ class Repo:
         with self.engine.begin() as c:
             has = c.execute(text("SELECT 1 FROM pg_extension WHERE extname = 'pg_search'")).first()
             if not has:
-                # needs a role allowed to create extensions; operators may pre-install it instead
                 c.execute(text("CREATE EXTENSION pg_search"))
             c.execute(text(db.BM25_DDL))
 
-    # ---- reporting --------------------------------------------------------------
-
     def withdraw_out_of_window(self) -> list[str]:
-        """Take items outside the corpus window out of search: delete their passages and pages
-        and their progress from mirror onwards. Their mirrored files stay in the raw lake,
-        which is write-once. Returns the identifiers withdrawn."""
+        """Delete pages, passages and progress from mirror onwards for items outside the corpus
+        window. Their raw files stay in the lake."""
         outside = (
             select(db.item.c.identifier)
             .join(db.stage_state, db.stage_state.c.identifier == db.item.c.identifier)
@@ -344,7 +325,6 @@ class Repo:
         return idents
 
     def outside_window(self, collection: str | None = None) -> int:
-        """Listed items outside the corpus window, which stop after the lane stage."""
         q = select(func.count()).select_from(db.item).where(~_in_window(db.item.c.issue_date))
         if collection:
             q = q.where(db.item.c.collection == collection)
@@ -411,5 +391,4 @@ def _i(v: Any) -> int | None:
 
 
 def _in_window(issue_date: Any) -> Any:
-    """SQL for corpus_core.collections.in_window: an item with no date is outside."""
     return and_(issue_date.is_not(None), issue_date.between(WINDOW_START, WINDOW_END))

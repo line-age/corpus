@@ -14,4 +14,3 @@ htmlcov/
 
 # Personal Claude Code overrides
 .claude/settings.local.json
-/data/

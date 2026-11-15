@@ -11,6 +11,13 @@ Work is tracked in the [Corpus](https://github.com/orgs/line-age/projects/2) pro
 team lead is [@FlorenceEgwu](https://github.com/FlorenceEgwu). If that changes, the
 [controlplane's table](https://github.com/line-age/controlplane#projects-and-leads) is updated first.
 
+## Architecture
+
+![Corpus architecture: publications from Archive.org flow through ingest, the raw data lake and ETL into a searchable data warehouse, served by a retrieval API to Cite, Legend and other apps](docs/corpus_sys_diagram.png)
+
+The source is [docs/corpus_sys_diagram.drawio](docs/corpus_sys_diagram.drawio); edit it in
+[draw.io](https://app.diagrams.net) and re-export the PNG when the design changes.
+
 ## Setup
 - Docker (https://docker.com)
 - Make
@@ -42,8 +49,7 @@ on every run, so they never touch development data.
 
 ## Ingest
 
-Ingest is being built. The plan is [docs/ingestion-plan.md](docs/ingestion-plan.md)
-and the design is [docs/architecture.md](docs/architecture.md).
+Ingest is being built. The plan is [docs/ingestion-plan.md](docs/ingestion-plan.md).
 
 Only issues dated 1920-1961 are mirrored and indexed; the rest are listed but stop after the
 lane stage. The plan explains the window.

@@ -1,8 +1,8 @@
 # Ingestion plan
 
 How `corpus` gets the trade press from Internet Archive into a searchable index. Status: proposed,
-2026-11-11. Builds on [architecture.md](architecture.md) (lean stack: Typer CLI over a `stage_state`
-table, Postgres with `pg_search`, Internet Archive's own OCR).
+2026-11-11. Lean stack: Typer CLI over a `stage_state` table, Postgres with `pg_search`,
+Internet Archive's own OCR.
 
 **Gate:** every in-scope issue mirrored, paged and indexed with both lanes set, by mid-December, with
 the Pipeline & Gas Journal run done first as the proof of concept.

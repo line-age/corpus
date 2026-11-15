@@ -1,8 +1,4 @@
-"""The ingest schema, in the ingest database (corpus-ingest-db).
-
-The tables are created by the repo's single Alembic history (migrations/ at the repo root,
-revision 0002 onwards). Change them there with a new revision, not here alone.
-"""
+"""The ingest schema. Change it with a new revision in the repo-root migrations/."""
 
 from sqlalchemy import (
     BigInteger,

@@ -36,17 +36,14 @@ services:
       - lineage
     restart: unless-stopped
 
-  # The ingest database: ParadeDB is Postgres with pg_search, which the BM25 index needs, and
-  # pgvector, which migration 0001 enables. Same credentials and migrations as corpus-db
-  # (`make db-migrate` applies them to both). Published on the host so `uv run corpus-ingest`
-  # works outside compose.
+  # ParadeDB adds pg_search, which the BM25 index needs.
   corpus-ingest-db:
     image: paradedb/paradedb:latest # pin a version tag before sharing
     env_file: .env
     ports:
       - "${FORWARD_INGEST_DB_PORT:-5433}:5432"
     volumes:
-      # The parent of PGDATA, which works for images on Postgres 18 and on earlier versions.
+      # The parent of PGDATA, so it works on Postgres 18 and earlier.
       - corpus-ingest-db-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
@@ -57,8 +54,6 @@ services:
       - lineage
     restart: unless-stopped
 
-  # Ingestion pipeline CLI: `docker compose run --rm corpus-ingest run -c ... --ids ...`.
-  # Behind a profile so `make up` doesn't start it.
   corpus-ingest:
     profiles: ["ingest"]
     build:
@@ -77,7 +72,6 @@ services:
     networks:
       - lineage
 
-  # Optional S3-compatible raw store; the default is the local corpus-raw-data volume.
   corpus-minio:
     profiles: ["s3"]
     image: minio/minio:latest # pin a release tag before sharing

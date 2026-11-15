@@ -2,10 +2,9 @@
 
 # Targets:
 #   dev      everything including test tools, installed editable; used by compose.yaml
-#   ingest   the corpus-ingest CLI: corpus_core and corpus_ingest only, no API; used by compose.yaml
-#   production  the shippable image: production dependencies only, non-root (default target)
-#
-# production must stay the last stage: it is what a build without --target produces.
+#   ingest   the corpus-ingest CLI, without the API; used by compose.yaml
+#   production  the shippable image: production dependencies only, non-root (default target;
+#               keep it the last stage)
 
 ARG PYTHON_VERSION=3.13
 # What both targets pass to uvicorn. --factory: uvicorn calls create_app() when it starts,
@@ -29,8 +28,7 @@ WORKDIR /app
 
 FROM base AS build
 COPY pyproject.toml uv.lock ./
-# uv reads every workspace member's pyproject.toml to resolve the lockfile, even for
-# production, whose dependencies don't include them.
+# uv needs every workspace member's pyproject.toml to resolve the lockfile.
 COPY packages ./packages
 COPY apps ./apps
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -58,11 +56,10 @@ ENV UVICORN_ARGS="${UVICORN_ARGS}"
 CMD ["sh", "-c", "exec uvicorn $UVICORN_ARGS --port \"${API_PORT:-9001}\" --reload --reload-dir src"]
 
 FROM base AS ingest-build
-# The workspace manifests only; uv needs them to resolve the lockfile.
 COPY pyproject.toml uv.lock ./
 COPY packages ./packages
 COPY apps ./apps
-# Non-editable: the ingest stage copies only the virtualenv, not these sources.
+# Non-editable: the ingest stage copies only the virtualenv.
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --no-editable --package corpus-ingest
 
@@ -70,8 +67,7 @@ FROM python:${PYTHON_VERSION}-slim AS ingest
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH=/opt/venv/bin:$PATH
-# /raw is the raw store's mount point; a new named volume takes this ownership when first
-# mounted, so the non-root user can write to it.
+# A new named volume mounted at /raw takes this ownership.
 RUN groupadd --system corpus && useradd --system --gid corpus --no-create-home corpus \
     && mkdir /raw && chown corpus:corpus /raw
 COPY --from=ingest-build /opt/venv /opt/venv

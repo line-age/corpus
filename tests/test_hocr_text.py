@@ -107,7 +107,6 @@ def test_printed_numbers_fall_back_to_leaf_match():
 
 
 def test_leaf_comes_from_page_id_when_ppageno_is_always_zero():
-    # The shape of real Internet Archive hOCR: every page says ppageno 0.
     real = b"""<html><body>
     <div class="ocr_page" id="page_000000" title="bbox 0 0 9 9; ppageno 0"></div>
     <div class="ocr_page" id="page_000001" title="bbox 0 0 9 9; ppageno 0"></div>

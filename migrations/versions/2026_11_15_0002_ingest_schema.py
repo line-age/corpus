@@ -1,8 +1,6 @@
 """Ingest schema: publication, item, stage_state, page, passage.
 
-Moved from corpus_core's own migration history so the API and ingest share one. The BM25
-index on passage needs ParadeDB's pg_search, so the ingest `index` stage creates it, not
-this migration; this revision runs on plain Postgres too.
+The BM25 index needs pg_search, so the ingest `index` stage creates it, not this revision.
 
 Revision ID: 0002
 Revises: 0001

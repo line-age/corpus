@@ -27,7 +27,6 @@ PGJ = "pub_pipeline-gas-journal"
 BASE = "https://archive.org"
 ITEMS = [
     {
-        # Inside the corpus window (1920-1961) and before 1929, so its lane is confirmed.
         "identifier": "sim_pipeline-gas-journal_1925-06-06_122_23",
         "title": "American Gas Journal 1925-06-06: Vol 122 Iss 23",
         "date": "1925-06-06T00:00:00Z",
@@ -50,8 +49,7 @@ def repo(database_url):
     eng = create_engine(database_url)
     with eng.begin() as c:
         c.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
-    # The drop also removes extensions such as pg_search. A connection that saw them goes
-    # stale: recreating pg_search on it then fails with "relation is not a ParadeDB index".
+    # The drop removes pg_search; a connection that saw it would go stale.
     eng.dispose()
     config = Config(str(ROOT / "alembic.ini"))
     config.attributes["url"] = database_url
@@ -158,8 +156,7 @@ async def test_every_stage(repo, tmp_path, hocr_bytes, page_numbers_bytes):
         pytest.skip(f"pg_search not installed; BM25 step not exercised ({e})")
     else:
         assert res.done == 1  # the other item is waiting on normalise again
-        # Re-marking pages withdrew the issue's passages; rebuild them so there is
-        # something to search. The index stage then indexes the issue too.
+        # Re-marking pages withdrew the issue's passages; rebuild them to search.
         for stage in (S.normalise_stage(repo, sel), S.passages_stage(repo, sel)):
             assert stage.done == 1
         assert S.index_stage(repo, sel).done == 1
@@ -191,11 +188,9 @@ def test_items_outside_the_window_stop_after_lane_and_are_withdrawn(repo):
         for stage in ("enumerate", "classify", "lane"):
             repo.mark(ident, stage, ok=True)
 
-    # every item is listed and laned, but only the in-window one goes on to be mirrored
     assert repo.pending("mirror", PGJ) == [ITEMS[0]["identifier"]]
     assert repo.outside_window(PGJ) == 3
 
-    # an early item processed before the window existed is taken back out of search
     ident = early["identifier"]
     for stage in ("mirror", "pages", "normalise", "passages", "index"):
         repo.mark(ident, stage, ok=True)

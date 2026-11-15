@@ -13,9 +13,7 @@ from lxml import html as lxml_html
 
 _WCONF = re.compile(r"x_wconf\s+(\d+)")
 _PPAGENO = re.compile(r"ppageno\s+(\d+)")
-# Internet Archive numbers each page element page_000000, page_000001, ... by leaf, matching
-# leafNum in the page-numbers file. Its ppageno is 0 on every page (Tesseract runs per image),
-# so it is only a fallback.
+# IA ids pages by leaf (page_000003); its ppageno is 0 on every page.
 _PAGE_ID = re.compile(r"^page_(\d+)$")
 _WS = re.compile(r"\s+")
 

@@ -1,7 +1,4 @@
-"""The eight ingest stages. Each takes items in its predecessor's done state and records its own.
-
-A failure is recorded against the item and never stops the run.
-"""
+"""The eight ingest stages. A failure is recorded against its item and never stops the run."""
 
 import asyncio
 import hashlib
@@ -60,7 +57,7 @@ def _per_item(repo: Repo, stage: str, sel: Selection, fn: Callable[[str], None])
     for ident in _select(repo, stage, sel):
         try:
             fn(ident)
-        except Exception as e:  # recorded per item; one bad item never stops the run
+        except Exception as e:
             repo.mark(ident, stage, ok=False, error=f"{type(e).__name__}: {e}")
             res.fail(ident, str(e))
             log.warning("stage_failed", stage=stage, identifier=ident, error=str(e))
@@ -68,9 +65,6 @@ def _per_item(repo: Repo, stage: str, sel: Selection, fn: Callable[[str], None])
             repo.mark(ident, stage, ok=True)
             res.ok()
     return res
-
-
-# ---- 1. enumerate -------------------------------------------------------------------
 
 
 async def enumerate_collection(
@@ -87,8 +81,7 @@ async def enumerate_collection(
     batch: list[dict] = []
 
     def flush() -> None:
-        # Only new or changed items are (re)marked: marking resets later stages, so unchanged
-        # items keep their progress and a re-run of `run` really does skip finished work.
+        # Marking resets later stages, so only new or changed items are marked.
         changed = set(repo.upsert_items(collection, batch))
         never_marked = set(repo.without_stage([r["identifier"] for r in batch], "enumerate"))
         for ident in sorted(changed | never_marked):
@@ -105,9 +98,6 @@ async def enumerate_collection(
             flush()
     flush()
     return res
-
-
-# ---- 2. classify, 3. lane -----------------------------------------------------------
 
 
 def classify_stage(repo: Repo, sel: Selection) -> Result:
@@ -146,9 +136,6 @@ def lane_stage(repo: Repo, sel: Selection) -> Result:
     return _per_item(repo, "lane", sel, fn)
 
 
-# ---- 4. mirror ----------------------------------------------------------------------
-
-
 async def mirror_stage(
     repo: Repo, ia: IAClient, store: RawStore, sel: Selection, concurrency: int = 8
 ) -> Result:
@@ -170,8 +157,8 @@ async def mirror_stage(
                             raise IAError(f"no {suffix} file")
                         continue
                     key = raw_key(it["collection"], ident, f.name)
-                    # Write-once: a stored file is never rewritten. Record what is actually in
-                    # the lake, which differs from IA's current file if IA has since re-OCR'd.
+                    # The lake is write-once, so record the stored file, which may predate a
+                    # re-OCR on IA.
                     body = None if store.exists(key) else await ia.download(meta, f)
                     if body is None or not store.put(key, body):
                         body = store.get(key)
@@ -195,9 +182,6 @@ async def mirror_stage(
 
     await asyncio.gather(*(one(i) for i in _select(repo, "mirror", sel)))
     return res
-
-
-# ---- 5. pages -----------------------------------------------------------------------
 
 
 def _parse(args: tuple[bytes, bytes | None]) -> list[Page]:
@@ -231,7 +215,7 @@ def pages_stage(repo: Repo, store: RawStore, sel: Selection, workers: int = 1) -
                 record(ident, e)
         return res
 
-    # Bounded batches: hOCR files run to tens of MB, so never hold more than 2x workers in memory.
+    # hOCR files run to tens of MB: hold at most two per worker in memory.
     with ProcessPoolExecutor(max_workers=workers) as pool:
         for start in range(0, len(idents), 2 * workers):
             futures = {}
@@ -246,9 +230,6 @@ def pages_stage(repo: Repo, store: RawStore, sel: Selection, workers: int = 1) -
                 except Exception as e:
                     record(ident, e)
     return res
-
-
-# ---- 6. normalise, 7. passages ------------------------------------------------------
 
 
 def normalise_stage(repo: Repo, sel: Selection) -> Result:
@@ -276,13 +257,9 @@ def passages_stage(repo: Repo, sel: Selection) -> Result:
     return _per_item(repo, "passages", sel, fn)
 
 
-# ---- 8. index -----------------------------------------------------------------------
-
-
 def index_stage(repo: Repo, sel: Selection) -> Result:
-    """pg_search keeps the BM25 index current on insert; this stage makes sure it exists and
-    records which items are searchable. It first withdraws anything outside the corpus window,
-    such as items processed before the window existed, so search holds only in-window issues."""
+    """Withdraw items outside the corpus window, make sure the BM25 index exists, and record
+    items as searchable. pg_search keeps the index current on insert."""
     withdrawn = repo.withdraw_out_of_window()
     if withdrawn:
         log.info("withdrawn_out_of_window", items=len(withdrawn))

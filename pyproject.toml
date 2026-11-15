@@ -17,13 +17,10 @@ dependencies = [
 dev = [
     "httpx2>=2.16",
     "pytest>=9.2",
-    # Ingestion pipeline (uv workspace members below) and its test/lint tooling.
     "corpus-core",
     "corpus-ingest",
     "pytest-asyncio>=0.24",
     "respx>=0.21",
-    "ruff>=0.7",
-    "pyright>=1.1.390",
 ]
 
 [tool.uv.workspace]
@@ -43,23 +40,3 @@ addopts = ["-ra", "--strict-markers"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = ["db: needs a Postgres database (set CORPUS_TEST_DATABASE_URL)"]
-
-[tool.ruff]
-line-length = 100
-target-version = "py313"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
-
-[tool.pyright]
-pythonVersion = "3.13"
-# The API (src/) and its tests aren't type-clean yet; check the ingestion code only.
-include = [
-    "packages",
-    "apps",
-    "tests/test_classify_lanes.py",
-    "tests/test_hocr_text.py",
-    "tests/test_ia_storage.py",
-    "tests/test_pipeline_db.py",
-]
-typeCheckingMode = "standard"

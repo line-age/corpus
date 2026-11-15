@@ -28,9 +28,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 try:
-    # The ingest tables (corpus_core.db) share this history. corpus-core is a dev
-    # dependency, so it is missing from the production image, which only applies migrations
-    # and never autogenerates them.
+    # corpus-core is a dev dependency, absent from the production image.
     from corpus_core.db import metadata as ingest_metadata
 except ImportError:
     target_metadata = Base.metadata

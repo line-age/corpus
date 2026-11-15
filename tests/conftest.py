@@ -102,9 +102,6 @@ def make_client() -> Iterator[Callable[[], TestClient]]:
         yield make
 
 
-# Ingestion pipeline fixtures (corpus_core / corpus_ingest).
-
-
 @pytest.fixture
 def hocr_bytes() -> bytes:
     return (FIXTURES / "sample_hocr.html").read_bytes()

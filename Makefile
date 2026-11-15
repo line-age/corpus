@@ -33,8 +33,7 @@ down:
 test: build
 	$(COMPOSE) run --rm $(API) pytest $(ARGS)
 
-# One migration history for both databases: corpus-db, then corpus-ingest-db, which uses
-# the same credentials.
+# One migration history for both databases; corpus-ingest-db uses the same credentials.
 db-migrate: build
 	$(COMPOSE) run --rm $(API) alembic upgrade head
 	$(COMPOSE) up -d --wait corpus-ingest-db
