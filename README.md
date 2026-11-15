@@ -45,6 +45,9 @@ on every run, so they never touch development data.
 Ingest is being built. The plan is [docs/ingestion-plan.md](docs/ingestion-plan.md)
 and the design is [docs/architecture.md](docs/architecture.md).
 
+Only issues dated 1920-1961 are mirrored and indexed; the rest are listed but stop after the
+lane stage. The plan explains the window.
+
 ```text
 src/corpus/             the API
 packages/corpus_core/   index format: schema and migrations, collections, lanes, hOCR parsing,
@@ -61,7 +64,8 @@ starts alongside the API's. Both share one migration history in `migrations/`, a
 
 ```sh
 make setup && make db-migrate
-docker compose run --rm corpus-ingest run -c pub_pipeline-gas-journal --ids fixtures/pgj-sample-15.txt
+docker compose run --rm -v "$PWD/fixtures:/fixtures:ro" corpus-ingest \
+  run -c pub_pipeline-gas-journal --ids /fixtures/pgj-sample-15.txt
 docker compose run --rm corpus-ingest status
 ```
 

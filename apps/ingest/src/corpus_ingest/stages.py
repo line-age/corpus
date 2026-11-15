@@ -281,6 +281,10 @@ def passages_stage(repo: Repo, sel: Selection) -> Result:
 
 def index_stage(repo: Repo, sel: Selection) -> Result:
     """pg_search keeps the BM25 index current on insert; this stage makes sure it exists and
-    records which items are searchable."""
+    records which items are searchable. It first withdraws anything outside the corpus window,
+    such as items processed before the window existed, so search holds only in-window issues."""
+    withdrawn = repo.withdraw_out_of_window()
+    if withdrawn:
+        log.info("withdrawn_out_of_window", items=len(withdrawn))
     repo.ensure_bm25()
     return _per_item(repo, "index", sel, lambda _ident: None)

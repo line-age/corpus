@@ -16,7 +16,7 @@ model behaviour.
 
 ```mermaid
 flowchart TB
-    IA([Internet Archive<br/>3 US trade-press collections, 1859-1961])
+    IA([Internet Archive<br/>3 US trade-press collections, 1920-1961])
     CITE([cite])
 
     subgraph ingest[ingest - batch, run mostly once]

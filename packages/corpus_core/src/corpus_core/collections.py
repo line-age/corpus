@@ -7,6 +7,24 @@ collection's patterns is classified `other` and listed for a person to look at.
 
 import re
 from dataclasses import dataclass
+from datetime import date
+
+# The issue years corpus mirrors and indexes, inclusive. Items outside are still listed,
+# classified and laned, but never mirrored, paged or indexed.
+# - 1961: the last year of full weekly issues. From 1962 Internet Archive holds only annual
+#   index volumes, in every collection at once (Legend decision 0015, docs/corpus.md).
+# - 1920: where 0015 measured full weekly coverage from. Decision 0017 found the collections
+#   reach back to 1859; corpus starts at 1920 by choice, not because earlier issues are missing.
+FIRST_YEAR = 1920
+LAST_YEAR = 1961
+WINDOW_START = date(FIRST_YEAR, 1, 1)
+WINDOW_END = date(LAST_YEAR, 12, 31)
+
+
+def in_window(issue_date: date | None) -> bool:
+    """Whether an issue is in the corpus window. An item with no date is not: its year
+    can't be checked."""
+    return issue_date is not None and WINDOW_START <= issue_date <= WINDOW_END
 
 
 @dataclass(frozen=True)

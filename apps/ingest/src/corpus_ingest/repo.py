@@ -6,6 +6,7 @@ from datetime import date
 from typing import Any
 
 from corpus_core import db
+from corpus_core.collections import WINDOW_END, WINDOW_START
 from corpus_core.hocr import Page
 from corpus_core.passages import Passage
 from sqlalchemy import and_, delete, func, insert, or_, select, text, update
@@ -36,6 +37,10 @@ BY_NAME = {s.name: s for s in STAGES}
 
 
 _NAMES = [s.name for s in STAGES]
+
+# Stages that only run on items inside the corpus window (corpus_core.collections). The ones
+# before them run on every listed item, so out-of-window items still get a kind and lanes.
+WINDOWED_STAGES = tuple(_NAMES[_NAMES.index("mirror") :])
 
 
 def downstream(stage: str) -> list[str]:
@@ -170,6 +175,8 @@ class Repo:
                     and_(cur.c.status == "failed", cur.c.attempts < self.max_attempts),
                 )
             )
+        if stage in WINDOWED_STAGES:
+            q = q.where(_in_window(db.item.c.issue_date))
         if collection:
             q = q.where(db.item.c.collection == collection)
         if identifiers is not None:  # an empty list selects nothing, not everything
@@ -310,6 +317,40 @@ class Repo:
 
     # ---- reporting --------------------------------------------------------------
 
+    def withdraw_out_of_window(self) -> list[str]:
+        """Take items outside the corpus window out of search: delete their passages and pages
+        and their progress from mirror onwards. Their mirrored files stay in the raw lake,
+        which is write-once. Returns the identifiers withdrawn."""
+        outside = (
+            select(db.item.c.identifier)
+            .join(db.stage_state, db.stage_state.c.identifier == db.item.c.identifier)
+            .where(
+                db.stage_state.c.stage.in_(WINDOWED_STAGES),
+                ~_in_window(db.item.c.issue_date),
+            )
+            .distinct()
+        )
+        with self.engine.begin() as c:
+            idents = sorted(c.execute(outside).scalars())
+            if idents:
+                c.execute(delete(db.passage).where(db.passage.c.identifier.in_(idents)))
+                c.execute(delete(db.page).where(db.page.c.identifier.in_(idents)))
+                c.execute(
+                    delete(db.stage_state).where(
+                        db.stage_state.c.identifier.in_(idents),
+                        db.stage_state.c.stage.in_(WINDOWED_STAGES),
+                    )
+                )
+        return idents
+
+    def outside_window(self, collection: str | None = None) -> int:
+        """Listed items outside the corpus window, which stop after the lane stage."""
+        q = select(func.count()).select_from(db.item).where(~_in_window(db.item.c.issue_date))
+        if collection:
+            q = q.where(db.item.c.collection == collection)
+        with self.engine.connect() as c:
+            return c.execute(q).scalar_one()
+
     def status(self, collection: str | None = None) -> list[dict[str, Any]]:
         q = (
             select(db.stage_state.c.stage, db.stage_state.c.status, func.count().label("items"))
@@ -367,3 +408,8 @@ def _i(v: Any) -> int | None:
         return int(v)
     except (TypeError, ValueError):
         return None
+
+
+def _in_window(issue_date: Any) -> Any:
+    """SQL for corpus_core.collections.in_window: an item with no date is outside."""
+    return and_(issue_date.is_not(None), issue_date.between(WINDOW_START, WINDOW_END))

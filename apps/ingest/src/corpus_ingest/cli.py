@@ -9,6 +9,7 @@ from typing import Annotated
 
 import structlog
 import typer
+from corpus_core.collections import FIRST_YEAR, LAST_YEAR
 from corpus_core.config import get_settings
 from corpus_core.db import engine
 from corpus_core.ia import IAClient
@@ -192,6 +193,11 @@ def status(collection: Collection = None) -> None:
     for st in STAGES:
         done, failed = counts.get((st.name, "done"), 0), counts.get((st.name, "failed"), 0)
         typer.echo(f"{st.name:<10} {done:>8} {failed:>8}")
+    outside = repo.outside_window(collection)
+    if outside:
+        typer.echo(
+            f"\n{outside} listed items are outside {FIRST_YEAR}-{LAST_YEAR}; they stop after lane."
+        )
     fails = repo.failures()
     if fails:
         typer.echo("\nlatest failures:")

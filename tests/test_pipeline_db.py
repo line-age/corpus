@@ -17,7 +17,7 @@ from corpus_core.ia import IAClient
 from corpus_core.storage import LocalStore
 from corpus_ingest import stages as S
 from corpus_ingest.repo import Repo
-from sqlalchemy import create_engine, func, select, text
+from sqlalchemy import create_engine, func, insert, select, text
 
 pytestmark = pytest.mark.db
 
@@ -27,12 +27,13 @@ PGJ = "pub_pipeline-gas-journal"
 BASE = "https://archive.org"
 ITEMS = [
     {
-        "identifier": "sim_pipeline-gas-journal_1859-08-01_1_2",
-        "title": "The American Gas-Light Journal 1859-08-01: Vol 1 Iss 2",
-        "date": "1859-08-01T00:00:00Z",
+        # Inside the corpus window (1920-1961) and before 1929, so its lane is confirmed.
+        "identifier": "sim_pipeline-gas-journal_1925-06-06_122_23",
+        "title": "American Gas Journal 1925-06-06: Vol 122 Iss 23",
+        "date": "1925-06-06T00:00:00Z",
         "publisher": "Oildom Publishing Company of Texas, Inc.",
-        "volume": "1",
-        "issue": "2",
+        "volume": "122",
+        "issue": "23",
     },
     {
         "identifier": "sim_pipeline-gas-journal_1956-02_46",
@@ -167,6 +168,61 @@ async def test_every_stage(repo, tmp_path, hocr_bytes, page_numbers_bytes):
                 text("SELECT count(*) FROM passage WHERE search_text @@@ 'Martinsville'")
             ).scalar_one()
         assert hits >= 1
+
+
+def test_items_outside_the_window_stop_after_lane_and_are_withdrawn(repo):
+    repo.ensure_publication(PGJ, "P&GJ", 1)
+    early = {
+        **ITEMS[0],
+        "identifier": "sim_pipeline-gas-journal_1879-01-02_30",
+        "date": "1879-01-02",
+    }
+    late = {**ITEMS[0], "identifier": "sim_pipeline-gas-journal_1965_index", "date": "1965-01-01"}
+    undated = {**ITEMS[0], "identifier": "sim_pipeline-gas-journal_undated"}
+    del undated["date"]
+    repo.upsert_items(PGJ, [ITEMS[0], early, late, undated])
+    everyone = [
+        ITEMS[0]["identifier"],
+        early["identifier"],
+        late["identifier"],
+        "sim_pipeline-gas-journal_undated",
+    ]
+    for ident in everyone:
+        for stage in ("enumerate", "classify", "lane"):
+            repo.mark(ident, stage, ok=True)
+
+    # every item is listed and laned, but only the in-window one goes on to be mirrored
+    assert repo.pending("mirror", PGJ) == [ITEMS[0]["identifier"]]
+    assert repo.outside_window(PGJ) == 3
+
+    # an early item processed before the window existed is taken back out of search
+    ident = early["identifier"]
+    for stage in ("mirror", "pages", "normalise", "passages", "index"):
+        repo.mark(ident, stage, ok=True)
+    with repo.engine.begin() as c:
+        c.execute(
+            insert(db.passage).values(
+                identifier=ident,
+                leaf=0,
+                seq=0,
+                char_start=0,
+                char_end=4,
+                word_count=1,
+                search_text="gas",
+                collection=PGJ,
+                kind="issue",
+                license_lane="public-domain",
+                pipeline_version=1,
+            )
+        )
+    assert repo.withdraw_out_of_window() == [ident]
+    with repo.engine.connect() as c:
+        assert c.execute(select(func.count()).select_from(db.passage)).scalar_one() == 0
+        stages = c.execute(
+            select(db.stage_state.c.stage).where(db.stage_state.c.identifier == ident)
+        ).scalars()
+        assert set(stages) == {"enumerate", "classify", "lane"}
+    assert repo.withdraw_out_of_window() == []  # nothing left to withdraw
 
 
 def test_failures_are_recorded_and_retried(repo):

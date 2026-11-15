@@ -20,7 +20,15 @@ today. Ingest cannot start until `archive.org` and `*.us.archive.org` are allowe
 
 Counts for 2 and 3 are from the Legend spike and are re-counted at enumeration. Out of scope:
 `pub_gas-journal` (British, Legend 0015), page images, embeddings, OCR correction, article
-segmentation. Post-1961 items are ingested and marked by lane.
+segmentation.
+
+**Date window: 1920 to 1961.** Every item is listed, classified and laned, but only issues dated
+1920-1961 are mirrored, paged and indexed (`corpus_core.collections.FIRST_YEAR` and `LAST_YEAR`).
+1961 is the last year of full weekly issues; from 1962 only annual index volumes exist (Legend
+0015). The collections reach back to 1859 (Legend 0017); starting at 1920 is a choice, so
+the earlier issues stay listed and can be brought in by moving `FIRST_YEAR`. Items processed
+before the window existed are withdrawn from search by the next `index` run; their raw files
+stay in the lake.
 
 ## What the 15-issue sample changed
 
@@ -136,5 +144,4 @@ Scaled from 11 sampled issues: mean 54 leaves, 7.7 MB mirrored and about 45,000 
 - Does the infra-lab offer Postgres with `pg_search` and an S3-compatible bucket? (@sudosume)
 - Index annual indexes and *Merchandising*, or keep but exclude?
 - Is leaf-level citation acceptable to `cite` when there is no printed number? (@bornakapusta)
-- Post-1961 items: lake only, or indexed with lane marked? (the research partner)
 - Which contact goes in the User-Agent?
