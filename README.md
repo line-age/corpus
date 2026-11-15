@@ -40,6 +40,45 @@ default), interactive docs are at <http://localhost:9001/docs>.
 Tests use their own databases (`<POSTGRES_DB>_test` and `<POSTGRES_DB>_test_bare`), recreated
 on every run, so they never touch development data.
 
+## Ingest
+
+Ingest is being built; search is not started. The plan is [docs/ingestion-plan.md](docs/ingestion-plan.md)
+and the design is [docs/architecture.md](docs/architecture.md).
+
+```text
+src/corpus/             the API
+packages/corpus_core/   index format: schema and migrations, collections, lanes, hOCR parsing,
+                        normalisation, passages, Internet Archive client, raw store
+apps/ingest/            the corpus-ingest CLI: one command per stage
+tests/                  API and ingest tests; the ingest end-to-end test needs Postgres
+fixtures/               identifier lists for real runs
+```
+
+Ingest needs outbound HTTPS to `archive.org` and `*.us.archive.org`. Run it in compose (it
+uses the `corpus-db` database and keeps raw files in the `corpus-raw-data` volume):
+
+```sh
+docker compose run --rm corpus-ingest migrate
+docker compose run --rm corpus-ingest run -c pub_pipeline-gas-journal --ids fixtures/pgj-sample-15.txt
+docker compose run --rm corpus-ingest status
+```
+
+or on the host with Python 3.13 and [uv](https://docs.astral.sh/uv/), with `CORPUS_DATABASE_URL`
+pointing at a Postgres you can reach (compose doesn't publish `corpus-db`'s port to the host):
+
+```sh
+uv sync
+uv run corpus-ingest migrate
+uv run corpus-ingest run -c pub_pipeline-gas-journal --ids fixtures/pgj-sample-15.txt
+uv run corpus-ingest export --sample 20 -o review.csv
+```
+
+Each stage is also its own command (`enumerate`, `classify`, `lane`, `mirror`, `pages`,
+`normalise`, `passages`, `index`). Every one is safe to re-run: items already done are skipped,
+failed items are retried up to three times, and finishing a stage for an item resets the stages
+after it. `--force` redoes items regardless. Set `CORPUS_TEST_DATABASE_URL` to run the ingest
+end-to-end test; without it, that test is skipped.
+
 ## Service Status Endpoints
 
 - `GET /` names the service and its version, and links the docs when they are enabled.

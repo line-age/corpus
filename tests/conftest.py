@@ -9,6 +9,7 @@ touch the development database: the fixtures below create their own, named after
 POSTGRES_DB, and recreate them at the start of every session.
 """
 
+import os
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack
 from pathlib import Path
@@ -24,6 +25,7 @@ from corpus.api.main import create_app
 from corpus.config import Settings, get_settings
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def _env_value(value: Any) -> str:
@@ -98,3 +100,24 @@ def make_client() -> Iterator[Callable[[], TestClient]]:
             return stack.enter_context(TestClient(create_app()))
 
         yield make
+
+
+# Ingestion pipeline fixtures (corpus_core / corpus_ingest).
+
+
+@pytest.fixture
+def hocr_bytes() -> bytes:
+    return (FIXTURES / "sample_hocr.html").read_bytes()
+
+
+@pytest.fixture
+def page_numbers_bytes() -> bytes:
+    return (FIXTURES / "sample_page_numbers.json").read_bytes()
+
+
+@pytest.fixture
+def database_url() -> str:
+    url = os.environ.get("CORPUS_TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("set CORPUS_TEST_DATABASE_URL to run database tests")
+    return url

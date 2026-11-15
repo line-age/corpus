@@ -36,8 +36,46 @@ services:
       - lineage
     restart: unless-stopped
 
+  # Ingestion pipeline CLI: `docker compose run --rm corpus-ingest run -c ... --ids ...`.
+  # Behind a profile so `make up` doesn't start it.
+  corpus-ingest:
+    profiles: ["ingest"]
+    build:
+      context: .
+      dockerfile: Dockerfile.ingest
+    image: corpus-ingest:dev
+    env_file: .env
+    environment:
+      CORPUS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-corpus}:${POSTGRES_PASSWORD:-corpus}@corpus-db:5432/${POSTGRES_DB:-corpus}
+      CORPUS_RAW_STORE: file:///raw
+    volumes:
+      - corpus-raw-data:/raw
+    depends_on:
+      corpus-db:
+        condition: service_healthy
+    networks:
+      - lineage
+
+  # Optional S3-compatible raw store; the default is the local corpus-raw-data volume.
+  corpus-minio:
+    profiles: ["s3"]
+    image: minio/minio:latest # pin a release tag before sharing
+    command: server /data --console-address :9101
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9100:9000"
+      - "9101:9101"
+    volumes:
+      - corpus-minio-data:/data
+    networks:
+      - lineage
+
 volumes:
   corpus-db-data:
+  corpus-raw-data:
+  corpus-minio-data:
 
 networks:
   lineage:
