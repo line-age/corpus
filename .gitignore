@@ -1,8 +1,16 @@
+.env
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+build/
+dist/
 .pytest_cache/
 .ruff_cache/
-.env
-/data/
-*.egg-info/
+.mypy_cache/
+.coverage
+htmlcov/
+.DS_Store
+
+# Personal Claude Code overrides
+.claude/settings.local.json

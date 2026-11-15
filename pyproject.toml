@@ -1,42 +1,28 @@
 [project]
-name = "corpus-workspace"
-version = "0.0.0"
-requires-python = ">=3.12"
-dependencies = ["corpus-core", "corpus-ingest"]
-
-[tool.uv]
-package = false
-
-[tool.uv.workspace]
-members = ["packages/*", "apps/*"]
-
-[tool.uv.sources]
-corpus-core = { workspace = true }
-corpus-ingest = { workspace = true }
+name = "corpus"
+version = "0.1.0"
+description = "Lineage trade-press ingest and authority-ranked RAG search."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.20",
+    "fastapi>=0.162",
+    "psycopg[binary]>=3.3",
+    "pydantic-settings>=2.16",
+    "sqlalchemy[asyncio]>=2.1",
+    "uvicorn[standard]>=0.54",
+]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3",
-    "pytest-asyncio>=0.24",
-    "respx>=0.21",
-    "ruff>=0.7",
-    "pyright>=1.1.390",
+    "httpx2>=2.16",
+    "pytest>=9.2",
 ]
 
-[tool.ruff]
-line-length = 100
-target-version = "py312"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
-
-[tool.pyright]
-pythonVersion = "3.12"
-include = ["packages", "apps", "tests"]
-typeCheckingMode = "standard"
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14"]
+build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
-markers = ["db: needs a Postgres database (set CORPUS_TEST_DATABASE_URL)"]
+addopts = ["-ra", "--strict-markers"]
