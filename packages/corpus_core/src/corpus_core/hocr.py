@@ -13,6 +13,10 @@ from lxml import html as lxml_html
 
 _WCONF = re.compile(r"x_wconf\s+(\d+)")
 _PPAGENO = re.compile(r"ppageno\s+(\d+)")
+# Internet Archive numbers each page element page_000000, page_000001, ... by leaf, matching
+# leafNum in the page-numbers file. Its ppageno is 0 on every page (Tesseract runs per image),
+# so it is only a fallback.
+_PAGE_ID = re.compile(r"^page_(\d+)$")
 _WS = re.compile(r"\s+")
 
 MIN_WORDS_FOR_DUPLICATE = 20  # near-blank pages share hashes and are not duplicates
@@ -67,7 +71,7 @@ def parse_hocr(hocr: bytes, page_numbers: bytes | None = None) -> list[Page]:
     page_els = root.xpath('//*[contains(@class, "ocr_page")]')
     leaves: list[int] = []
     for idx, page_el in enumerate(page_els):
-        m = _PPAGENO.search(page_el.get("title", ""))
+        m = _PAGE_ID.match(page_el.get("id", "")) or _PPAGENO.search(page_el.get("title", ""))
         leaves.append(int(m.group(1)) if m else idx)
     if len(set(leaves)) != len(leaves):
         raise ValueError("hOCR leaf numbers are not unique")

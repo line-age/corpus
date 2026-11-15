@@ -26,8 +26,12 @@ WORKDIR /app
 
 FROM base AS build
 COPY pyproject.toml uv.lock ./
+# uv reads every workspace member's pyproject.toml to resolve the lockfile, even for
+# production, whose dependencies don't include them.
+COPY packages ./packages
+COPY apps ./apps
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-install-project
+    uv sync --locked --no-dev --no-install-workspace
 COPY README.md ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -35,8 +39,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM base AS dev
 COPY pyproject.toml uv.lock ./
+COPY packages ./packages
+COPY apps ./apps
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-install-project
+    uv sync --locked --no-install-workspace
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked

@@ -42,7 +42,7 @@ on every run, so they never touch development data.
 
 ## Ingest
 
-Ingest is being built; search is not started. The plan is [docs/ingestion-plan.md](docs/ingestion-plan.md)
+Ingest is being built. The plan is [docs/ingestion-plan.md](docs/ingestion-plan.md)
 and the design is [docs/architecture.md](docs/architecture.md).
 
 ```text

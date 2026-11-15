@@ -49,6 +49,9 @@ def repo(database_url):
     eng = create_engine(database_url)
     with eng.begin() as c:
         c.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
+    # The drop also removes extensions such as pg_search. A connection that saw them goes
+    # stale: recreating pg_search on it then fails with "relation is not a ParadeDB index".
+    eng.dispose()
     config = Config(str(ROOT / "alembic.ini"))
     config.attributes["url"] = database_url
     command.upgrade(config, "head")
@@ -151,9 +154,14 @@ async def test_every_stage(repo, tmp_path, hocr_bytes, page_numbers_bytes):
     except Exception as e:  # plain Postgres without pg_search
         if "pg_search" not in str(e) and "bm25" not in str(e):
             raise
-        pytest.skip("pg_search not installed; BM25 step not exercised")
+        pytest.skip(f"pg_search not installed; BM25 step not exercised ({e})")
     else:
         assert res.done == 1  # the other item is waiting on normalise again
+        # Re-marking pages withdrew the issue's passages; rebuild them so there is
+        # something to search. The index stage then indexes the issue too.
+        for stage in (S.normalise_stage(repo, sel), S.passages_stage(repo, sel)):
+            assert stage.done == 1
+        assert S.index_stage(repo, sel).done == 1
         with repo.engine.connect() as c:
             hits = c.execute(
                 text("SELECT count(*) FROM passage WHERE search_text @@@ 'Martinsville'")

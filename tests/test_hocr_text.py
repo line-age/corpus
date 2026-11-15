@@ -106,6 +106,19 @@ def test_printed_numbers_fall_back_to_leaf_match():
     assert [x.printed_page for x in parse_hocr(HOCR_HEADER, numbers)] == [None, "9"]
 
 
+def test_leaf_comes_from_page_id_when_ppageno_is_always_zero():
+    # The shape of real Internet Archive hOCR: every page says ppageno 0.
+    real = b"""<html><body>
+    <div class="ocr_page" id="page_000000" title="bbox 0 0 9 9; ppageno 0"></div>
+    <div class="ocr_page" id="page_000001" title="bbox 0 0 9 9; ppageno 0"></div>
+    <div class="ocr_page" id="page_000002" title="bbox 0 0 9 9; ppageno 0"></div>
+    </body></html>"""
+    numbers = b'{"pages":[{"leafNum":1,"pageNumber":"7"}]}'
+    pages = parse_hocr(real, numbers)
+    assert [p.leaf for p in pages] == [0, 1, 2]
+    assert [p.printed_page for p in pages] == [None, "7", None]
+
+
 def test_colliding_leaf_numbers_fail_loudly():
     bad = b"""<html><body><div class="ocr_page" title="ppageno 1"></div>
     <div class="ocr_page" title="bbox 0 0 1 1"></div></body></html>"""
