@@ -1,4 +1,8 @@
-"""The corpus schema. One Postgres database; the migration in migrations/ creates it."""
+"""The ingest schema, in the ingest database (corpus-ingest-db).
+
+The tables are created by the repo's single Alembic history (migrations/ at the repo root,
+revision 0002 onwards). Change them there with a new revision, not here alone.
+"""
 
 from sqlalchemy import (
     BigInteger,

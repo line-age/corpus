@@ -12,7 +12,7 @@ help:
 	@echo 'up - Start the stack in the background'
 	@echo 'down - Stop the stack (the database volume is kept)'
 	@echo 'test - Run the test suite in a container (pass pytest options with ARGS="...")'
-	@echo 'db-migrate - Apply database migrations'
+	@echo 'db-migrate - Apply database migrations to the API and ingest databases'
 	@echo 'lock - Update uv.lock after changing dependencies in pyproject.toml'
 
 # Created from the example on first use; an existing .env is never overwritten.
@@ -33,8 +33,12 @@ down:
 test: build
 	$(COMPOSE) run --rm $(API) pytest $(ARGS)
 
+# One migration history for both databases: corpus-db, then corpus-ingest-db, which uses
+# the same credentials.
 db-migrate: build
 	$(COMPOSE) run --rm $(API) alembic upgrade head
+	$(COMPOSE) up -d --wait corpus-ingest-db
+	$(COMPOSE) run --rm -e POSTGRES_HOST=corpus-ingest-db $(API) alembic upgrade head
 
 lock: build
 	$(COMPOSE) run --rm --no-deps $(API) uv lock

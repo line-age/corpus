@@ -18,7 +18,7 @@ team lead is [@FlorenceEgwu](https://github.com/FlorenceEgwu). If that changes, 
 ## Running it
 
 ```sh
-make setup        # build the images and start the API and Postgres (pgvector)
+make setup        # build the images; start the API, its Postgres (pgvector) and the ingest database
 make db-migrate   # apply migrations, including enabling the vector extension
 curl localhost:9001/healthz
 ```
@@ -54,21 +54,22 @@ tests/                  API and ingest tests; the ingest end-to-end test needs P
 fixtures/               identifier lists for real runs
 ```
 
-Ingest needs outbound HTTPS to `archive.org` and `*.us.archive.org`. Run it in compose (it
-uses the `corpus-db` database and keeps raw files in the `corpus-raw-data` volume):
+Ingest has its own database, `corpus-ingest-db` (ParadeDB, for `pg_search`), which `make up`
+starts alongside the API's. Both share one migration history in `migrations/`, and
+`make db-migrate` applies it to both. Ingest needs outbound HTTPS to `archive.org` and
+`*.us.archive.org`. Run it in compose (raw files go to the `corpus-raw-data` volume):
 
 ```sh
-docker compose run --rm corpus-ingest migrate
+make setup && make db-migrate
 docker compose run --rm corpus-ingest run -c pub_pipeline-gas-journal --ids fixtures/pgj-sample-15.txt
 docker compose run --rm corpus-ingest status
 ```
 
-or on the host with Python 3.13 and [uv](https://docs.astral.sh/uv/), with `CORPUS_DATABASE_URL`
-pointing at a Postgres you can reach (compose doesn't publish `corpus-db`'s port to the host):
+or on the host with Python 3.13 and [uv](https://docs.astral.sh/uv/). `CORPUS_DATABASE_URL` in
+`.env` already points at `corpus-ingest-db` on `localhost:5433`:
 
 ```sh
 uv sync
-uv run corpus-ingest migrate
 uv run corpus-ingest run -c pub_pipeline-gas-journal --ids fixtures/pgj-sample-15.txt
 uv run corpus-ingest export --sample 20 -o review.csv
 ```

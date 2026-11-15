@@ -6,18 +6,22 @@ pg_search extension (ParadeDB); without it that step is skipped and everything e
 
 import hashlib
 import json
+from pathlib import Path
 
 import pytest
 import respx
+from alembic import command
+from alembic.config import Config
 from corpus_core import db
 from corpus_core.ia import IAClient
-from corpus_core.migrate import upgrade
 from corpus_core.storage import LocalStore
 from corpus_ingest import stages as S
 from corpus_ingest.repo import Repo
 from sqlalchemy import create_engine, func, select, text
 
 pytestmark = pytest.mark.db
+
+ROOT = Path(__file__).resolve().parents[1]
 
 PGJ = "pub_pipeline-gas-journal"
 BASE = "https://archive.org"
@@ -45,7 +49,9 @@ def repo(database_url):
     eng = create_engine(database_url)
     with eng.begin() as c:
         c.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
-    upgrade(database_url)
+    config = Config(str(ROOT / "alembic.ini"))
+    config.attributes["url"] = database_url
+    command.upgrade(config, "head")
     return Repo(eng)
 
 

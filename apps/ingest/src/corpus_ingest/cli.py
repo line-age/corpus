@@ -12,7 +12,6 @@ import typer
 from corpus_core.config import get_settings
 from corpus_core.db import engine
 from corpus_core.ia import IAClient
-from corpus_core.migrate import upgrade
 from corpus_core.storage import open_store
 
 from corpus_ingest import stages as S
@@ -65,13 +64,6 @@ def _setup() -> None:
         processors=[structlog.processors.TimeStamper(fmt="iso"), structlog.dev.ConsoleRenderer()],
         logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
     )
-
-
-@app.command()
-def migrate() -> None:
-    """Create or upgrade the database schema."""
-    upgrade(get_settings().database_url)
-    typer.echo("schema at head")
 
 
 @app.command("enumerate")

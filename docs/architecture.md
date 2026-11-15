@@ -151,7 +151,7 @@ takes on AGPL terms for the extension. OpenSearch is the alternative behind the 
 
 ```text
 corpus/
-  packages/corpus_core/   index format: models, SQL, migrations, lanes, vocabulary loader
+  packages/corpus_core/   index format: models, SQL, lanes, vocabulary loader (migrations live in the repo-root `migrations/`)
   apps/ingest/            stage CLI
   apps/search/            FastAPI service
   vocabulary/             era tables, YAML, versioned (Legend 0017)
