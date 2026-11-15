@@ -63,7 +63,7 @@ services:
     profiles: ["ingest"]
     build:
       context: .
-      dockerfile: Dockerfile.ingest
+      target: ingest
     image: corpus-ingest:dev
     env_file: .env
     environment:

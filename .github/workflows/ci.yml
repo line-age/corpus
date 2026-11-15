@@ -33,5 +33,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f Dockerfile.ingest -t corpus-ingest:ci .
+      - run: docker build --target ingest -t corpus-ingest:ci .
       - run: docker run --rm corpus-ingest:ci --help

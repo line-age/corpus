@@ -159,8 +159,7 @@ corpus/
   eval/                   gold sets, held-out split, recall@k and MRR
   fixtures/               a few public IA issues for tests
   docs/architecture.md
-  Dockerfile.ingest
-  Dockerfile.search
+  Dockerfile              one file, a build target per image (dev, ingest, production)
 ```
 
 ## Evaluation
