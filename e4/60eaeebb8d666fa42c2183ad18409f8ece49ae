@@ -1,0 +1,40 @@
+src/corpus/api/modules/search/service.py
+  h_3b7e0f61390819 12-17,20,24,26,29-31,38-41,96-123,126-129,131,133,136-147,149-150,152-156,158-169,172,179-194,197,217
+README.md
+  h_3b7e0f61390819 97-101,103-105,109,114,121
+.env.example
+  s_9e7f37978313f3::t_c1fe932f8b10e3 9-10
+src/corpus/api/modules/search/dto.py
+  s_9e7f37978313f3::t_637cd5e5e50b42 4,64-69,74-76
+src/corpus/api/modules/search/repository.py
+  s_9e7f37978313f3::t_3291d0a7e53dbc 4,6,25-33,54-59
+src/corpus/api/modules/search/router.py
+  s_9e7f37978313f3::t_8ebebba1eeffdd 11,18-20,29-32
+src/corpus/config.py
+  s_9e7f37978313f3::t_116648b0da9bc0 32-35
+tests/test_search.py
+  s_9e7f37978313f3::t_0f0fce154969cb 212-255
+tests/test_search_service.py
+  s_9e7f37978313f3::t_14d62ccb82c2bc 9-10,35-37,218-319
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "e460eaeebb8d666fa42c2183ad18409f8ece49ae",
+  "prompts": {},
+  "humans": {
+    "h_3b7e0f61390819": {
+      "author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  },
+  "sessions": {
+    "s_9e7f37978313f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1f512e33-9a35-4146-a412-a9d43c145677",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  }
+}
