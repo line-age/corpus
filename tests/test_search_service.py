@@ -6,8 +6,8 @@ from unittest.mock import create_autospec
 
 import pytest
 
-from corpus.api.modules.search.repository import SearchRepository
-from corpus.api.modules.search.service import SNIPPET_CONTEXT, SearchService
+from corpus.api.modules.search.repository import CorpusStats, SearchRepository
+from corpus.api.modules.search.service import SNIPPET_CONTEXT, SearchService, bm25
 from corpus.models import Document, Page
 
 def make_page(text: str, leaf_number: int = 0, page_number: str | None = None) -> Page:
@@ -32,8 +32,9 @@ def repository():
     return mock
 
 
-def search(repository, query: str, limit: int = 20, offset: int = 0):
-    return asyncio.run(SearchService(repository).search(query, limit=limit, offset=offset))
+def search(repository, query: str, limit: int = 20, offset: int = 0, *, ranking: bool = False):
+    service = SearchService(repository, ranking=ranking)
+    return asyncio.run(service.search(query, limit=limit, offset=offset))
 
 
 def matched(hit) -> str:
@@ -214,3 +215,105 @@ def test_offset_past_the_end_returns_the_total_and_no_results(repository):
 
     assert result.total == 2
     assert result.results == []
+
+
+# Ranking (the SEARCH_RANKING_ENABLED feature flag)
+
+STATS = CorpusStats(pages=1000, average_page_length=100.0)
+
+
+def test_without_ranking_results_are_in_corpus_order_without_scores(repository):
+    repository.find_pages_containing.return_value = [
+        make_page("Tulsa once.", leaf_number=1),
+        make_page("Tulsa, Tulsa and Tulsa again.", leaf_number=2),
+    ]
+
+    result = search(repository, "Tulsa")
+
+    assert result.order == "corpus"
+    assert [hit.page.leaf_number for hit in result.results] == [1, 2, 2, 2]
+    assert {hit.score for hit in result.results} == {None}
+    repository.get_corpus_stats.assert_not_awaited()
+
+
+def test_ranking_puts_the_page_with_more_occurrences_first(repository):
+    repository.get_corpus_stats.return_value = STATS
+    repository.find_pages_containing.return_value = [
+        make_page("Tulsa once, among other news of the day.", leaf_number=1),
+        make_page("Tulsa, Tulsa and Tulsa again, all day.", leaf_number=2),
+    ]
+
+    result = search(repository, "Tulsa", ranking=True)
+
+    assert result.order == "relevance"
+    assert [hit.page.leaf_number for hit in result.results] == [2, 2, 2, 1]
+    scores = [hit.score for hit in result.results]
+    assert scores == sorted(scores, reverse=True)
+    assert len(set(scores[:3])) == 1  # occurrences on one page share its score
+    assert scores[0] > scores[3]
+
+
+def test_ranking_puts_the_shorter_page_first_when_counts_are_equal(repository):
+    repository.get_corpus_stats.return_value = STATS
+    repository.find_pages_containing.return_value = [
+        make_page("Tulsa " + "and other news " * 40, leaf_number=1),
+        make_page("Tulsa news.", leaf_number=2),
+    ]
+
+    result = search(repository, "Tulsa", ranking=True)
+
+    assert [hit.page.leaf_number for hit in result.results] == [2, 1]
+
+
+def test_ranking_keeps_corpus_order_for_equal_scores(repository):
+    repository.get_corpus_stats.return_value = STATS
+    repository.find_pages_containing.return_value = [
+        make_page("Tulsa news. More Tulsa.", leaf_number=leaf) for leaf in (5, 3, 9)
+    ]
+
+    result = search(repository, "Tulsa", ranking=True)
+
+    # The repository's order (here 5, 3, 9) is corpus order; within a page, position.
+    assert [hit.page.leaf_number for hit in result.results] == [5, 5, 3, 3, 9, 9]
+    assert [hit.snippet for hit in result.results] == ["Tulsa news.", "More Tulsa."] * 3
+
+
+def test_ranking_pages_after_sorting(repository):
+    repository.get_corpus_stats.return_value = STATS
+    repository.find_pages_containing.return_value = [
+        make_page("Tulsa once, among other news of the day.", leaf_number=1),
+        make_page("Tulsa, Tulsa and Tulsa again, all day.", leaf_number=2),
+    ]
+
+    result = search(repository, "Tulsa", limit=2, offset=2, ranking=True)
+
+    assert result.total == 4
+    assert [hit.page.leaf_number for hit in result.results] == [2, 1]
+
+
+def test_ranking_without_matches_skips_the_corpus_stats(repository):
+    result = search(repository, "Tulsa", ranking=True)
+
+    assert (result.order, result.total) == ("relevance", 0)
+    repository.get_corpus_stats.assert_not_awaited()
+
+
+def test_bm25_grows_with_occurrences_but_with_diminishing_returns():
+    one, two, three = (bm25(n, 100, 10, STATS) for n in (1, 2, 3))
+
+    assert 0 < one < two < three
+    assert three - two < two - one
+
+
+def test_bm25_falls_as_pages_get_longer():
+    assert bm25(1, 50, 10, STATS) > bm25(1, 100, 10, STATS) > bm25(1, 400, 10, STATS)
+
+
+def test_bm25_is_higher_for_a_phrase_on_fewer_pages():
+    assert bm25(1, 100, 5, STATS) > bm25(1, 100, 500, STATS) > 0
+
+
+def test_bm25_handles_a_corpus_of_empty_pages():
+    empty = CorpusStats(pages=1, average_page_length=0.0)
+
+    assert bm25(1, 0, 1, empty) > 0

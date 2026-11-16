@@ -1,8 +1,9 @@
 """Database queries behind search."""
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager
 
@@ -19,6 +20,15 @@ def _contains_pattern(token: str) -> str:
         .replace("_", LIKE_ESCAPE + "_")
     )
     return f"%{escaped}%"
+
+
+@dataclass(frozen=True)
+class CorpusStats:
+    """What relevance ranking needs to know about the whole corpus."""
+
+    pages: int
+    average_page_length: float
+    """Mean length of a page's text, in characters."""
 
 
 class SearchRepository:
@@ -41,3 +51,9 @@ class SearchRepository:
             .order_by(Document.publication_date, Document.id, Page.leaf_number)
         )
         return list((await self._session.scalars(statement)).all())
+
+    async def get_corpus_stats(self) -> CorpusStats:
+        """How many pages the corpus has and their average length."""
+        statement = select(func.count(Page.id), func.coalesce(func.avg(func.length(Page.text)), 0))
+        pages, average = (await self._session.execute(statement)).one()
+        return CorpusStats(pages=pages, average_page_length=float(average))

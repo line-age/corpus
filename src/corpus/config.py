@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     healthz_timeout_seconds: float = Field(default=3.0, gt=0)
     """How long each /healthz check may take before it is reported as failed."""
 
+    search_ranking_enabled: bool = False
+    """Feature flag. Order search results by relevance (BM25 over pages) instead of by
+    publication date and page, and include each result's score."""
+
     # Logging
     log_level: LogLevel = "INFO"
     """Lowest level the corpus logger emits. Case-insensitive in the environment."""

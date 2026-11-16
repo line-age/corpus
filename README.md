@@ -144,22 +144,31 @@ position and a link to that page of the scan) and the statement that contains it
 - Matching ignores case, allows any whitespace between words (OCR breaks lines inside
   phrases) and matches whole words only, so `Martin` does not match `Martinez`.
 - `match_start` and `match_end` locate the match within `snippet`, for highlighting.
+- Results are in corpus order (publication date, then page) by default. With the
+  `SEARCH_RANKING_ENABLED` feature flag on, they are ordered by relevance instead: each
+  page is scored with BM25, taking the whole phrase as the term, so pages that mention it
+  more often, and shorter pages, come first. Every result then carries its page's
+  `score`; otherwise `score` is null. `order` in the response says which applies.
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `SEARCH_RANKING_ENABLED` | `false` | Feature flag: order results by relevance (BM25) instead of by date and page |
 
 ```json
 {
-  "query": "Martin County", "total": 3, "limit": 20, "offset": 0,
+  "query": "Martin County", "order": "corpus", "total": 3, "limit": 20, "offset": 0,
   "results": [{
     "document": {"identifier": "sim_oil-gas-journal_1951-06-07_50_5", "title": "The Oil & Gas Journal 1951-06-07: Vol 50 Iss 5", "publication_date": "1951-06-07", "volume": "50", "issue": "5", "source_url": "https://archive.org/details/sim_oil-gas-journal_1951-06-07_50_5"},
     "page": {"leaf_number": 148, "page_number": "145", "url": "https://archive.org/details/sim_oil-gas-journal_1951-06-07_50_5/page/n148"},
     "snippet": "Breed- love, northwest Martin County wildcat, some 13 miles northwest of Tarzan, had proved 64 ft.",
-    "match_start": 23, "match_end": 36
+    "match_start": 23, "match_end": 36, "score": null
   }]
 }
 ```
 
 Known limits of this first version: abbreviations such as "Co." end a snippet early; a
 word hyphenated across a line break in the OCR is not found; and every matching page is
-read to count occurrences, which suits a few issues but not a large corpus.
+read to count and rank occurrences. Works for this POC - production-grade tooling with ParadeDB's pg_search will be required for full-text search queries (+ stemming) with ranking support.
 
 ## Service Status Endpoints
 

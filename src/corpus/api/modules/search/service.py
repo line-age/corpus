@@ -9,18 +9,36 @@ the statement that contains it.
   "Martinez".
 - A statement ends at ".", "!" or "?" followed by whitespace, or at a blank line.
   Abbreviations such as "Co." end it early; SNIPPET_CONTEXT keeps long ones bounded.
+
+Results are in corpus order unless ranking is on (the SEARCH_RANKING_ENABLED feature
+flag). Ranking scores each page with BM25, taking the whole phrase as the term: a page
+scores higher the more often the phrase occurs on it, with diminishing returns, and lower
+the longer the page is, so an article about a place outranks a long list that names it
+in passing. Every occurrence on a page shares the page's score.
 """
 
+import math
 import re
 from collections.abc import Sequence
 
-from corpus.api.modules.search.dto import DocumentCitation, PageCitation, SearchHit, SearchResponse
-from corpus.api.modules.search.repository import SearchRepository
+from corpus.api.modules.search.dto import (
+    DocumentCitation,
+    Order,
+    PageCitation,
+    SearchHit,
+    SearchResponse,
+)
+from corpus.api.modules.search.repository import CorpusStats, SearchRepository
 from corpus.models import Page
 
 SNIPPET_CONTEXT = 200
 """Most characters of context kept on each side of a match."""
 ELLIPSIS = "..."
+
+BM25_K1 = 1.2
+"""How quickly more occurrences on a page stop adding to its score."""
+BM25_B = 0.75
+"""How much a page's length counts against it: 0 not at all, 1 fully."""
 
 _CLOSERS = re.escape("\"')]’”")
 # The end of a statement before a match, through the whitespace that follows it.
@@ -75,28 +93,108 @@ def snippet(text: str, start: int, end: int) -> tuple[str, int, int]:
     return f"{lead}{before}{match}{after}{trail}", match_start, match_start + len(match)
 
 
+def bm25(occurrences: int, page_length: int, matching_pages: int, stats: CorpusStats) -> float:
+    """
+    BM25 score of a page on which the phrase occurs `occurrences` times,
+    when it occurs on `matching_pages` of the corpus's pages.
+
+    It uses the Okapi BM25 Formula (see https://en.wikipedia.org/wiki/Okapi_BM25), with
+    the IDF that Lucene uses, which stays positive however common the phrase is:
+
+        score = IDF * tf * (k1 + 1) / (tf + k1 * (1 - b + b * L / L_avg))
+        IDF   = ln(1 + (N - df + 0.5) / (df + 0.5))
+
+    where
+        tf     `occurrences`: times the phrase occurs on this page
+        L      `page_length`: length of this page's text, in characters
+        L_avg  `stats.average_page_length`: mean page length across the corpus
+        N      `stats.pages`: pages in the corpus
+        df     `matching_pages`: pages on which the phrase occurs at least once
+        k1     BM25_K1: how quickly more occurrences stop adding to the score
+        b      BM25_B: how much page length counts against a page
+
+    The whole phrase is the one term, so IDF is the same for every page in a query and
+    only tf and L change the order. When L_avg is 0 (every page empty), L / L_avg is
+    taken as 1.
+    """
+    idf = math.log(1 + (stats.pages - matching_pages + 0.5) / (matching_pages + 0.5))
+    relative_length = page_length / stats.average_page_length if stats.average_page_length else 1
+    saturation = BM25_K1 * (1 - BM25_B + BM25_B * relative_length)
+    return idf * occurrences * (BM25_K1 + 1) / (occurrences + saturation)
+
+
+# An occurrence: its page, where it starts and ends in the page's text, and its score.
+Occurrence = tuple[Page, int, int, float | None]
+
+
 class SearchService:
-    def __init__(self, repository: SearchRepository) -> None:
+    def __init__(self, repository: SearchRepository, *, ranking: bool = False) -> None:
         self._repository = repository
+        self._ranking = ranking
 
     async def search(self, query: str, limit: int, offset: int) -> SearchResponse:
-        """Every occurrence of `query`, in corpus order, with `limit` of them from `offset`."""
+        """Every occurrence of `query`, with `limit` of them from `offset`: in corpus order,
+        or by relevance when ranking is on.
+        
+        Logic: 
+        - Split search query into tokens
+        -  SQL filters to pages containing every word
+        - Then the regex matches the exact phrase.
+        - Aggregate documents containing tokens
+        - Rank documents by relevance with bm25 if ranking is turned on
+        - Return occurrences and metadata in search response
+
+        """
         tokens = query.split()
-        occurrences: list[tuple[Page, int, int]] = []
+
+        matches: list[tuple[Page, list[re.Match[str]]]] = []
         if tokens:
-            phrase = phrase_pattern(tokens)
+            phrase = phrase_pattern(tokens) # equivalent of what phraseto_ts_query in Postgres would do
+
+            #Find all pages containing of the search tokens in the database 
+            # Perform regex match for the search phrase
+            # Add the page and matched phrases to the matches list
             for page in await self._repository.find_pages_containing(tokens):
-                occurrences.extend((page, m.start(), m.end()) for m in phrase.finditer(page.text))
+                if found := list(phrase.finditer(page.text)):
+                    matches.append((page, found))
+
+        order: Order = "corpus"
+        occurrences: list[Occurrence]
+        if self._ranking:
+            order = "relevance"
+            occurrences = await self._ranked(matches)
+        else:
+            occurrences = [
+                (page, m.start(), m.end(), None) for page, found in matches for m in found
+            ]
         return SearchResponse(
             query=query,
+            order=order,
             total=len(occurrences),
             limit=limit,
             offset=offset,
             results=[_hit(*occurrence) for occurrence in occurrences[offset : offset + limit]],
         )
 
+    async def _ranked(self, matches: list[tuple[Page, list[re.Match[str]]]]) -> list[Occurrence]:
+        """The occurrences, highest-scoring page first. The sort is stable, so pages with
+        equal scores, and occurrences on the same page, stay in corpus order."""
+        if not matches:
+            return []
+        stats = await self._repository.get_corpus_stats()
+        scored = [
+            (page, found, bm25(len(found), len(page.text), len(matches), stats))
+            for page, found in matches
+        ]
+        scored.sort(key=lambda entry: entry[2], reverse=True)
+        return [
+            (page, m.start(), m.end(), round(score, 4))
+            for page, found, score in scored
+            for m in found
+        ]
 
-def _hit(page: Page, start: int, end: int) -> SearchHit:
+
+def _hit(page: Page, start: int, end: int, score: float | None) -> SearchHit:
     document = page.document
     text, match_start, match_end = snippet(page.text, start, end)
     return SearchHit(
@@ -116,4 +214,5 @@ def _hit(page: Page, start: int, end: int) -> SearchHit:
         snippet=text,
         match_start=match_start,
         match_end=match_end,
+        score=score,
     )

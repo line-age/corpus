@@ -209,3 +209,47 @@ def test_accepts_a_query_of_200_characters_after_stripping(migrated_db, make_cli
 
     assert response.status_code == 200
     assert response.json()["total"] == 0
+
+
+def test_results_are_in_corpus_order_without_scores_by_default(corpus, make_client):
+    body = make_client().get(URL, params={"q": "Zorbatown County"}).json()
+
+    assert body["order"] == "corpus"
+    assert {hit["score"] for hit in body["results"]} == {None}
+
+
+def test_ranking_flag_orders_results_by_score(corpus, configure, make_client):
+    corpus_order = make_client().get(URL, params={"q": "Zorbatown County"}).json()
+    configure(search_ranking_enabled=True)
+
+    body = make_client().get(URL, params={"q": "Zorbatown County"}).json()
+
+    assert body["order"] == "relevance"
+    assert body["total"] == corpus_order["total"] == 4
+    scores = [hit["score"] for hit in body["results"]]
+    assert all(score > 0 for score in scores)
+    assert scores == sorted(scores, reverse=True)
+
+    def cited(hit):
+        return (hit["document"]["identifier"], hit["page"]["leaf_number"], hit["snippet"])
+
+    # The same occurrences, reordered; both on leaf 7 share its score.
+    assert sorted(map(cited, body["results"])) == sorted(map(cited, corpus_order["results"]))
+    leaf_7 = {hit["score"] for hit in body["results"] if hit["page"]["leaf_number"] == 7}
+    assert len(leaf_7) == 1
+
+
+def test_corpus_stats_count_every_page(corpus, migrated_db):
+    async def stats():
+        engine = make_engine(migrated_db)
+        try:
+            async with make_sessionmaker(engine)() as session:
+                return await SearchRepository(session).get_corpus_stats()
+        finally:
+            await engine.dispose()
+
+    result = asyncio.run(stats())
+
+    # Other test files may add pages to the shared database, so only a lower bound.
+    assert result.pages >= 5
+    assert result.average_page_length > 0

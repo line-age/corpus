@@ -1,7 +1,7 @@
 """Request and response models for the search API."""
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, Field, StringConstraints
 
@@ -61,10 +61,19 @@ class SearchHit(BaseModel):
     """Offset in `snippet` where the matched text starts."""
     match_end: int
     """Offset in `snippet` just past the matched text."""
+    score: float | None
+    """Relevance of the result's page to the query (BM25); higher is more relevant.
+    Null when results are in corpus order."""
+
+
+Order = Literal["corpus", "relevance"]
 
 
 class SearchResponse(BaseModel):
     query: str
+    order: Order
+    """How `results` are ordered: "corpus" is by publication date, document, page and
+    position on the page; "relevance" is by score, highest first, then corpus order."""
     total: int
     """Every occurrence of the query, not only those in `results`."""
     limit: int
