@@ -61,6 +61,21 @@ class Settings(BaseSettings):
             raise ValueError("POSTGRES_MAX_CONNECTIONS must be at least POSTGRES_POOL_SIZE")
         return self
 
+    # Ingest
+    archive_org_base_url: str = "https://archive.org"
+    """Where ingest fetches archive.org items from, and the base of each document's
+    source_url. No trailing slash needed."""
+    ingest_http_timeout_seconds: float = Field(default=60, gt=0)
+    """Seconds ingest waits for archive.org to connect or send more data before giving up
+    on a request."""
+
+    @field_validator("archive_org_base_url")
+    @classmethod
+    def _check_archive_org_base_url(cls, value: str) -> str:
+        if not value.startswith(("http://", "https://")):
+            raise ValueError("ARCHIVE_ORG_BASE_URL must start with http:// or https://")
+        return value.rstrip("/")
+
     @property
     def database_url(self) -> URL:
         """SQLAlchemy URL for the configured database. Its repr masks the password."""

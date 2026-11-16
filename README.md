@@ -28,6 +28,8 @@ The source is [docs/corpus_sys_diagram.drawio](docs/corpus_sys_diagram.drawio); 
 make setup        # build the images; start the API, its Postgres (pgvector) and the ingest database
 make db-migrate   # apply migrations, including enabling the vector extension
 curl localhost:9001/healthz
+make ingest ITEM=sim_oil-gas-journal_1951-06-07_50_5
+curl 'localhost:9001/api/v1/search?q=Martin%20County'
 ```
 
 The first `make` creates `.env` from `.env.example`. With `DOCS_ENABLED=true` (the example
@@ -43,6 +45,7 @@ default), interactive docs are at <http://localhost:9001/docs>.
 | `make test` | Run pytest in a container; pass options with `ARGS="-k health"` |
 | `make db-migrate` | Apply Alembic migrations (`alembic upgrade head`) |
 | `make lock` | Update `uv.lock` after changing dependencies in `pyproject.toml` |
+| `make ingest ITEM=<id>` | Ingest an archive.org item's OCR text; `ARGS="--collection <name> ..."` for collections (see [Ingest](#ingest)) |
 
 Tests use their own databases (`<POSTGRES_DB>_test` and `<POSTGRES_DB>_test_bare`), recreated
 on every run, so they never touch development data.
@@ -89,6 +92,74 @@ Each stage is also its own command (`enumerate`, `classify`, `lane`, `mirror`, `
 failed items are retried up to three times, and finishing a stage for an item resets the stages
 after it. `--force` redoes items regardless. Set `CORPUS_TEST_DATABASE_URL` to run the ingest
 end-to-end test; without it, that test is skipped.
+
+## Ingest
+
+`make ingest ITEM=<identifier>` downloads an archive.org item's OCR text and stores it, one
+row per scanned page, so search results can cite their page. It runs
+`python -m corpus.ingestion <identifier> [<identifier> ...]` in the API container.
+
+- The text comes from the item's hOCR derivatives (`_hocr_searchtext.txt.gz` and
+  `_hocr_pageindex.json.gz`), which hold the same OCR as `_djvu.txt` but record where each
+  page starts. Printed page numbers come from `_page_numbers.json` when the item has one,
+  and the title, date, volume and issue from its metadata.
+- Each item is written in one transaction. Ingesting an item again replaces its pages, so
+  it is safe to repeat.
+- It exits 0 when every item succeeded, 1 when any failed and 2 for bad arguments.
+
+Whole collections are ingested with `ARGS`, for example the pre-1920 issues of three
+trade journals, 50 evenly spaced issues from each:
+
+```sh
+make ingest ARGS="--collection pub_pipeline-gas-journal --collection pub_oil-gas-journal \
+  --collection pub_world-oil --to 1919-12-31 --sample 50 --skip-existing"
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--collection <name>` | Ingest the items of an archive.org collection, oldest first (repeatable) |
+| `--from` / `--to YYYY-MM-DD` | Only collection items dated within these days, inclusive |
+| `--sample N` | Only N items per collection, evenly spaced from its first to its last |
+| `--skip-existing` | Leave items already stored alone; repeat an interrupted run to resume it |
+| `--concurrency N` | Items downloaded at once, 1 to 16 (default 4) |
+
+Data model (`src/corpus/models.py`): `documents` holds one row per item (identifier,
+title, publication date, volume, issue, `source_url`), and `pages` holds one row per
+scanned page (`leaf_number`, the 0-based position in the scan; `page_number`, the printed
+number or null; and `text`). A trigram index on `pages.text` serves the search filter.
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `ARCHIVE_ORG_BASE_URL` | `https://archive.org` | Where items are fetched from; document and page links use it too |
+| `INGEST_HTTP_TIMEOUT_SECONDS` | `60` | How long each request waits to connect or for more data |
+
+## Search
+
+`GET /api/v1/search?q=<words>` returns every occurrence of a word or phrase, such as a
+place name, with a citation for each: the document, the page (printed number, scan
+position and a link to that page of the scan) and the statement that contains it.
+
+- `q` is required, 2 to 200 characters. `limit` (1 to 100, default 20) and `offset`
+  (default 0) page through the occurrences; `total` counts all of them.
+- Matching ignores case, allows any whitespace between words (OCR breaks lines inside
+  phrases) and matches whole words only, so `Martin` does not match `Martinez`.
+- `match_start` and `match_end` locate the match within `snippet`, for highlighting.
+
+```json
+{
+  "query": "Martin County", "total": 3, "limit": 20, "offset": 0,
+  "results": [{
+    "document": {"identifier": "sim_oil-gas-journal_1951-06-07_50_5", "title": "The Oil & Gas Journal 1951-06-07: Vol 50 Iss 5", "publication_date": "1951-06-07", "volume": "50", "issue": "5", "source_url": "https://archive.org/details/sim_oil-gas-journal_1951-06-07_50_5"},
+    "page": {"leaf_number": 148, "page_number": "145", "url": "https://archive.org/details/sim_oil-gas-journal_1951-06-07_50_5/page/n148"},
+    "snippet": "Breed- love, northwest Martin County wildcat, some 13 miles northwest of Tarzan, had proved 64 ft.",
+    "match_start": 23, "match_end": 36
+  }]
+}
+```
+
+Known limits of this first version: abbreviations such as "Co." end a snippet early; a
+word hyphenated across a line break in the OCR is not found; and every matching page is
+read to count occurrences, which suits a few issues but not a large corpus.
 
 ## Service Status Endpoints
 
