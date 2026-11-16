@@ -1,0 +1,85 @@
+.env.example
+  s_621fa13690ea4c::t_bdcce0c5d745f7 29-34
+AGENTS.md
+  s_621fa13690ea4c::t_69454d2baf3e3e 40,42,51-52
+Makefile
+  s_9e7f37978313f3::t_ae15ee2b43fc69 5,17,42-51
+README.md
+  s_9e7f37978313f3::t_5471251560f2d3 24-25,41,46-113
+migrations/env.py
+  s_9e7f37978313f3::t_13d91c7e872abd 19
+migrations/versions/2026_11_16_0002_add_documents_and_pages.py
+  s_9e7f37978313f3::t_e12496dbe8a0f4 1-66
+src/corpus/api/main.py
+  s_ad934bb938288d::t_8311b5991a7ba4 58
+src/corpus/api/modules/search/dto.py
+  s_621fa13690ea4c::t_a13b27fe0329a4 2-72
+src/corpus/api/modules/search/repository.py
+  s_621fa13690ea4c::t_cfe44bbde5d086 3-5,7-21,27-43
+src/corpus/api/modules/search/router.py
+  s_621fa13690ea4c::t_2489fea8abaeca 1,5,8,19-27
+src/corpus/api/modules/search/service.py
+  s_621fa13690ea4c::t_ce9de77e0c2863 1,3-17,19-75,81-119
+src/corpus/config.py
+  s_621fa13690ea4c::t_ecd2d627a33726 64-78
+src/corpus/ingestion/__init__.py
+  s_9e7f37978313f3::t_d5bb82dd50ef74 1-16
+src/corpus/ingestion/__main__.py
+  s_9e7f37978313f3::t_d576179c88497b 1-227
+src/corpus/ingestion/client.py
+  s_9e7f37978313f3::t_df16fa70a05b01 1-216
+src/corpus/ingestion/exceptions.py
+  s_621fa13690ea4c::t_d21630bb82cd3b 1-16
+src/corpus/ingestion/parsing.py
+  s_621fa13690ea4c::t_b9beb3e332b684 1-169
+src/corpus/ingestion/repository.py
+  s_9e7f37978313f3::t_bebd1ec1806f6e 1-51
+src/corpus/ingestion/service.py
+  s_9e7f37978313f3::t_1cfa0dd020265b 1-49
+src/corpus/models.py
+  s_9e7f37978313f3::t_f81e38131d10a6 1-81
+tests/test_ingest_cli.py
+  s_9e7f37978313f3::t_abdf7725fb33e4 1-219
+tests/test_ingest_client.py
+  s_9e7f37978313f3::t_cdddc504532869 1-269
+tests/test_ingest_parsing.py
+  s_621fa13690ea4c::t_31204bb20b8e91 1-179
+tests/test_ingest_service.py
+  s_9e7f37978313f3::t_bc95e89543eaea 1-223
+tests/test_search.py
+  s_ad934bb938288d::t_c01c26a8a32e7d 1-211
+tests/test_search_service.py
+  s_ad934bb938288d::t_4c096cc09f3daf 1-216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "0ddce118f71023e436fc9a64a7f1b055ed38a10b",
+  "prompts": {},
+  "sessions": {
+    "s_621fa13690ea4c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-acb7133a298cc2867",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    },
+    "s_9e7f37978313f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1f512e33-9a35-4146-a412-a9d43c145677",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    },
+    "s_ad934bb938288d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ab809a3dcb558a5e3",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    }
+  }
+}
