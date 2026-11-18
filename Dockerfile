@@ -2,7 +2,9 @@
 
 # Targets:
 #   dev      everything including test tools, installed editable; used by compose.yaml
-#   production  the shippable image: production dependencies only, non-root (default target)
+#   ingest   the corpus-ingest CLI, without the API; used by compose.yaml
+#   production  the shippable image: production dependencies only, non-root (default target;
+#               keep it the last stage)
 
 ARG PYTHON_VERSION=3.13
 # What both targets pass to uvicorn. --factory: uvicorn calls create_app() when it starts,
@@ -26,8 +28,11 @@ WORKDIR /app
 
 FROM base AS build
 COPY pyproject.toml uv.lock ./
+# uv needs every workspace member's pyproject.toml to resolve the lockfile.
+COPY packages ./packages
+COPY apps ./apps
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-install-project
+    uv sync --locked --no-dev --no-install-workspace
 COPY README.md ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -35,8 +40,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM base AS dev
 COPY pyproject.toml uv.lock ./
+COPY packages ./packages
+COPY apps ./apps
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-install-project
+    uv sync --locked --no-install-workspace
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
@@ -47,6 +54,26 @@ ENV UVICORN_ARGS="${UVICORN_ARGS}"
 # sh expands UVICORN_ARGS (unquoted, so it splits into separate arguments) and API_PORT;
 # exec replaces sh with uvicorn, so uvicorn is PID 1 and gets SIGTERM.
 CMD ["sh", "-c", "exec uvicorn $UVICORN_ARGS --port \"${API_PORT:-9001}\" --reload --reload-dir src"]
+
+FROM base AS ingest-build
+COPY pyproject.toml uv.lock ./
+COPY packages ./packages
+COPY apps ./apps
+# Non-editable: the ingest stage copies only the virtualenv.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --no-editable --package corpus-ingest
+
+FROM python:${PYTHON_VERSION}-slim AS ingest
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH=/opt/venv/bin:$PATH
+# A new named volume mounted at /raw takes this ownership.
+RUN groupadd --system corpus && useradd --system --gid corpus --no-create-home corpus \
+    && mkdir /raw && chown corpus:corpus /raw
+COPY --from=ingest-build /opt/venv /opt/venv
+USER corpus
+ENTRYPOINT ["corpus-ingest"]
+CMD ["--help"]
 
 FROM python:${PYTHON_VERSION}-slim AS production
 ENV PYTHONDONTWRITEBYTECODE=1 \

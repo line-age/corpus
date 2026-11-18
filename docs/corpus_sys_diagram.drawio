@@ -1,0 +1,113 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="HY1vQChGVVVJRjyZNE8A">
+    <mxGraphModel dx="862" dy="566" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Gas pipeline publications" vertex="1">
+          <mxGeometry height="60" width="120" x="60" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-6" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;defaultLabelBackgroundColor=page;" target="8wzZVlfVUSbkhHeznFRO-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-9" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="140" width="90" x="270" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-5" parent="8wzZVlfVUSbkhHeznFRO-9" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;rotation=90;" value="" vertex="1">
+          <mxGeometry height="140" width="30" x="45" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-7" parent="8wzZVlfVUSbkhHeznFRO-9" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Ingest" vertex="1">
+          <mxGeometry height="30" width="90" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Gas pipeline publications" vertex="1">
+          <mxGeometry height="60" width="120" x="70" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Gas pipeline publications" vertex="1">
+          <mxGeometry height="60" width="120" x="80" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-17" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.25;exitDx=0;exitDy=7.5;exitPerimeter=0;defaultLabelBackgroundColor=page;endArrow=classic;endFill=1;startArrow=none;startFill=0;" target="8wzZVlfVUSbkhHeznFRO-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-14" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" value="searchable&lt;div&gt;Datawarehouse&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="105" x="640" y="285" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-51" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;defaultLabelBackgroundColor=page;" target="8wzZVlfVUSbkhHeznFRO-50">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;" value="Retrieval/search API" vertex="1">
+          <mxGeometry height="60" width="120" x="420" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-18" parent="1" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;" value="&lt;b&gt;Questions to Answer:&lt;/b&gt;&lt;br&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(#000000, var(--ge-light-color, #ffffff));&quot;&gt;- what format is the data? text, image, video?&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(#000000, var(--ge-light-color, #ffffff));&quot;&gt;- Is there an API?&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;- Does a single document contain every metadata needed?&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="130" width="200" x="30" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-19" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.508;entryY=0.8;entryDx=0;entryDy=0;entryPerimeter=0;defaultLabelBackgroundColor=page;" target="8wzZVlfVUSbkhHeznFRO-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-20" parent="1" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;" value="&lt;b&gt;Questions to Answer:&lt;/b&gt;&lt;br&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;b&gt;- &lt;/b&gt;What is the minimum setup required for an MVP? Airflow, Docker for development, DB for configs &amp;amp; tracking data&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- What is the architecture and flow&amp;nbsp;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;- Spike: A basic CSV dump of a small dataset to show what the final output would look like?&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="140" width="390" x="260" y="15" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-22" parent="1" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;" value="&lt;div style=&quot;text-align: justify;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(#000000, var(--ge-light-color, #ffffff));&quot;&gt;- Is vectorisation needed at this stage, or would keyword search be sufficient? POC needed&lt;/span&gt;&lt;/div&gt;&lt;div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;- Establish a gold set&lt;/div&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="80" width="290" x="525" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-25" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 8px;&quot;&gt;Archive.org API&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="60" x="200" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-27" parent="1" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;" value="&lt;div style=&quot;text-align: justify;&quot;&gt;First issues (POC state)&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;1. POC data ingestion: internal data archive aka content_raw_data lake, batch transformation into cleaned data&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;2. POC search API: keyword-based search on transformed data&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;3. Set up database model - tables, metadata, initial database capacity, where does data live&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;4. POC infra setup: Docker, CI/CD, capacity estimation (drawn from average size of publication)&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;Delivery Timelines:&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;text-align: justify;&quot;&gt;Nb:&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="200" width="660" x="100" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-31" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;endArrow=none;endFill=0;startArrow=classic;startFill=1;" target="8wzZVlfVUSbkhHeznFRO-5" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="460" y="220" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-34" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="460" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-35" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;defaultLabelBackgroundColor=page;exitX=0.5;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="460" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-36" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="140" width="120" x="640" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-37" parent="8wzZVlfVUSbkhHeznFRO-36" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;rotation=90;" value="" vertex="1">
+          <mxGeometry height="150" width="30" x="15" y="-5" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-38" parent="8wzZVlfVUSbkhHeznFRO-36" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;ETL&lt;/font&gt;" vertex="1">
+          <mxGeometry height="30" width="90" x="-30" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-47" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-58" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;defaultLabelBackgroundColor=page;" target="8wzZVlfVUSbkhHeznFRO-37">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="220" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-48" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.661;entryY=0.019;entryDx=0;entryDy=0;entryPerimeter=0;defaultLabelBackgroundColor=page;" target="8wzZVlfVUSbkhHeznFRO-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-49" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-38" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;defaultLabelBackgroundColor=page;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="670" y="285" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-50" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Cite &amp;amp; Legend" vertex="1">
+          <mxGeometry height="60" width="120" x="220" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-52" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Cite &amp;amp; Legend" vertex="1">
+          <mxGeometry height="60" width="120" x="230" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-53" parent="1" style="rounded=1;whiteSpace=wrap;html=1;roundedPerimeter=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Cite, Legend and other destination apps" vertex="1">
+          <mxGeometry height="60" width="120" x="240" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-58" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" value="Raw DataLake" vertex="1">
+          <mxGeometry height="60" width="75" x="460" y="188" as="geometry" />
+        </mxCell>
+        <mxCell id="8wzZVlfVUSbkhHeznFRO-60" edge="1" parent="1" source="8wzZVlfVUSbkhHeznFRO-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.158;entryY=0.954;entryDx=0;entryDy=0;entryPerimeter=0;defaultLabelBackgroundColor=page;" target="8wzZVlfVUSbkhHeznFRO-20">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
