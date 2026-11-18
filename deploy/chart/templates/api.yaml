@@ -1,0 +1,87 @@
+{{- $fn := include "corpus.fullname" . }}
+{{- $tag := required "image.tag is required, e.g. sha-0123abc" .Values.image.tag }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fn }}-api
+  labels:
+    {{- include "corpus.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      {{- include "corpus.selector" (dict "root" . "component" "api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "corpus.labels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.migrations.enabled }}
+      initContainers:
+        # One migration history for both databases (see migrations/env.py). Each upgrade is
+        # a no-op when the database is already at head.
+        - name: migrate
+          image: "{{ .Values.image.api.repository }}:{{ $tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              alembic upgrade head
+              alembic -x url="{{ include "corpus.ingestUrl" . }}" upgrade head
+          env:
+            {{- include "corpus.apiDbEnv" . | nindent 12 }}
+            {{- include "corpus.ingestDbEnv" . | nindent 12 }}
+          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources: {{- toYaml .Values.migrations.resources | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      {{- end }}
+      containers:
+        - name: api
+          image: "{{ .Values.image.api.repository }}:{{ $tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: API_PORT
+              value: "9001"
+            {{- include "corpus.apiDbEnv" . | nindent 12 }}
+            {{- include "corpus.envMap" .Values.api.env | nindent 12 }}
+          {{- include "corpus.envFrom" .Values.api.envFromSecrets | nindent 10 }}
+          ports:
+            - {name: http, containerPort: 9001}
+          # /healthz answers 503 while a dependency is down, so it gates traffic; it does not
+          # restart the pod, since a restart cannot fix the database.
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            tcpSocket: {port: http}
+            periodSeconds: 20
+          securityContext: {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources: {{- toYaml .Values.api.resources | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fn }}-api
+  labels:
+    {{- include "corpus.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  selector:
+    {{- include "corpus.selector" (dict "root" . "component" "api") | nindent 4 }}
+  ports:
+    - {name: http, port: 80, targetPort: http}

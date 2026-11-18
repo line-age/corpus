@@ -1,0 +1,21 @@
+{{- if and .Values.rawStorage.enabled (not .Values.rawStorage.existingClaim) }}
+{{- if and .Values.ingest.rawStore (not (hasPrefix "file:///raw" .Values.ingest.rawStore)) }}
+{{- fail "ingest.rawStore is not on the raw volume; set rawStorage.enabled false" }}
+{{- end }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "corpus.claim" . }}
+  labels:
+    {{- include "corpus.labels" . | nindent 4 }}
+  annotations:
+    {{- include "corpus.keep" . | nindent 4 }}
+spec:
+  accessModes: [{{ .Values.rawStorage.accessMode }}]
+  {{- with .Values.rawStorage.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.rawStorage.size }}
+{{- end }}

@@ -1,0 +1,13 @@
+corpus {{ .Values.image.tag }} in {{ .Release.Namespace }}.
+
+The API has no authentication: anyone who can reach it can query it.
+{{- if .Values.ingress.enabled }}
+  https://{{ .Values.ingress.host }}/healthz
+{{- else }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "corpus.fullname" . }}-api 9001:80
+{{- end }}
+{{- range $name, $j := .Values.ingest.jobs }}
+
+Ingest job {{ $name }}{{ if $j.suspend }} (suspended){{ end }}: corpus-ingest {{ join " " $j.args }}
+  kubectl -n {{ $.Release.Namespace }} create job --from=cronjob/{{ include "corpus.fullname" $ }}-ingest-{{ $name }} {{ $name }}-$(date +%s)
+{{- end }}

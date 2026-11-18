@@ -1,0 +1,68 @@
+{{- /*
+Two one-instance CNPG clusters, unless database.<name>.existingSecret names an external one.
+Each creates database corpus owned by corpus and the <name>-app secret (host, port, dbname,
+username, password, uri). Extensions are created here, as the superuser, because the
+application user may not: `CREATE EXTENSION ... IF NOT EXISTS` in the migrations and in the
+index stage then finds them already there.
+*/ -}}
+{{- $fn := include "corpus.fullname" . }}
+{{- with .Values.database.api }}
+{{- if not .existingSecret }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $fn }}-api-db
+  labels:
+    {{- include "corpus.labels" $ | nindent 4 }}
+  annotations:
+    {{- include "corpus.keep" $ | nindent 4 }}
+spec:
+  instances: {{ .cnpg.instances }}
+  imageName: {{ required "database.api.cnpg.imageName is required (an image with pgvector)" .cnpg.imageName }}
+  bootstrap:
+    initdb:
+      database: corpus
+      owner: corpus
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS vector
+  storage:
+    size: {{ .cnpg.size }}
+    {{- with .cnpg.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- with .Values.database.ingest }}
+{{- if not .existingSecret }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $fn }}-ingest-db
+  labels:
+    {{- include "corpus.labels" $ | nindent 4 }}
+  annotations:
+    {{- include "corpus.keep" $ | nindent 4 }}
+spec:
+  instances: {{ .cnpg.instances }}
+  imageName: {{ required "database.ingest.cnpg.imageName is required (a ParadeDB image)" .cnpg.imageName }}
+  # ParadeDB's image runs postgres as 999, not CNPG's 26.
+  postgresUID: 999
+  postgresGID: 999
+  postgresql:
+    shared_preload_libraries: [pg_search]
+  bootstrap:
+    initdb:
+      database: corpus
+      owner: corpus
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS vector
+        - CREATE EXTENSION IF NOT EXISTS pg_search
+        - ALTER DATABASE corpus SET search_path TO public, paradedb
+  storage:
+    size: {{ .cnpg.size }}
+    {{- with .cnpg.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+{{- end }}
+{{- end }}

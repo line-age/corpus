@@ -1,0 +1,73 @@
+{{- $fn := include "corpus.fullname" . }}
+{{- range $name, $j := .Values.ingest.jobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $fn }}-ingest-{{ $name }}
+  labels:
+    {{- include "corpus.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: ingest
+spec:
+  schedule: {{ required (printf "ingest.jobs.%s.schedule is required" $name) $j.schedule | quote }}
+  suspend: {{ $j.suspend | default false }}
+  # Stages are resumable but not meant to run twice at once over the same items.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: {{ $j.backoffLimit | default 1 }}
+      {{- with $j.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ . }}
+      {{- end }}
+      template:
+        metadata:
+          labels:
+            {{- include "corpus.labels" $ | nindent 12 }}
+            app.kubernetes.io/component: ingest
+        spec:
+          restartPolicy: Never
+          {{- with $.Values.imagePullSecrets }}
+          imagePullSecrets: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext: {{- toYaml $.Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: ingest
+              image: "{{ $.Values.image.ingest.repository }}:{{ required "image.tag is required" $.Values.image.tag }}"
+              imagePullPolicy: {{ $.Values.image.pullPolicy }}
+              # The database URL is built from the secret's URI at start, so the password is
+              # never written into the spec.
+              command:
+                - sh
+                - -c
+                - export CORPUS_DATABASE_URL="{{ include "corpus.ingestUrl" $ }}"; exec corpus-ingest "$@"
+                - corpus-ingest
+              args:
+                {{- range (required (printf "ingest.jobs.%s.args is required" $name) $j.args) }}
+                - {{ . | toString | quote }}
+                {{- end }}
+              workingDir: /tmp
+              env:
+                {{- include "corpus.ingestDbEnv" $ | nindent 16 }}
+                - name: PGSSLMODE
+                  value: {{ $.Values.database.sslmode | quote }}
+                - name: CORPUS_RAW_STORE
+                  value: {{ $.Values.ingest.rawStore | default "file:///raw" | quote }}
+                {{- include "corpus.envMap" $.Values.ingest.env | nindent 16 }}
+              {{- include "corpus.envFrom" $.Values.ingest.envFromSecrets | nindent 14 }}
+              securityContext: {{- toYaml $.Values.containerSecurityContext | nindent 16 }}
+              resources: {{- toYaml $.Values.ingest.resources | nindent 16 }}
+              volumeMounts:
+                - {name: tmp, mountPath: /tmp}
+                {{- if $.Values.rawStorage.enabled }}
+                - {name: raw, mountPath: /raw}
+                {{- end }}
+          volumes:
+            - name: tmp
+              emptyDir: {sizeLimit: 1Gi}
+            {{- if $.Values.rawStorage.enabled }}
+            - name: raw
+              persistentVolumeClaim: {claimName: {{ include "corpus.claim" $ }}}
+            {{- end }}
+{{- end }}
