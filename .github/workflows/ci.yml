@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [production, ingest]
+        target: [api, ingest]
     env:
       # Images are pushed on branch pushes only; pull requests build without pushing.
       PUSH: ${{ github.event_name != 'pull_request' }}

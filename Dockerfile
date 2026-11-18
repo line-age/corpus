@@ -3,7 +3,7 @@
 # Targets:
 #   dev      everything including test tools, installed editable; used by compose.yaml
 #   ingest   the corpus-ingest CLI, without the API; used by compose.yaml
-#   production  the shippable image: production dependencies only, non-root (default target;
+#   api         the shippable API image: production dependencies only, non-root (default target;
 #               keep it the last stage)
 
 ARG PYTHON_VERSION=3.13
@@ -75,7 +75,7 @@ USER corpus
 ENTRYPOINT ["corpus-ingest"]
 CMD ["--help"]
 
-FROM python:${PYTHON_VERSION}-slim AS production
+FROM python:${PYTHON_VERSION}-slim AS api
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH=/opt/venv/bin:$PATH

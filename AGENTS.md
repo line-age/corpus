@@ -163,7 +163,7 @@ is safe to show a client; any other exception is reported by its type name only.
   `uv sync --locked`, so a stale `uv.lock` fails the build.
 - The `Dockerfile` has two targets:
   - `dev` is what compose uses. Source is mounted and uvicorn reloads on changes.
-  - `production` is the default and the image that ships: production dependencies only,
+  - `api` is the default and the image that ships: production dependencies only,
     running as a non-root user.
 - Both start uvicorn with `sh -c "exec uvicorn ..."` on `$API_PORT` and `--no-access-log`.
   Keep the `exec`; without it uvicorn is not PID 1 and never receives SIGTERM.
