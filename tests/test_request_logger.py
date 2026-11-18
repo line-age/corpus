@@ -7,7 +7,11 @@ from corpus.api.main import create_app
 
 
 def _request_logs(caplog, prefix: str) -> list[logging.LogRecord]:
-    return [r for r in caplog.records if r.name == "corpus" and r.getMessage().startswith(prefix)]
+    return [
+        r
+        for r in caplog.records
+        if r.name == "corpus" and r.getMessage().startswith(prefix)
+    ]
 
 
 def test_requests_are_logged_with_status_and_duration(make_client, caplog, configure):

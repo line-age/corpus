@@ -34,7 +34,9 @@ def test_a_slow_check_times_out_without_failing_the_others(repository):
 
 
 def test_unexpected_errors_are_reported_by_type_only(repository):
-    repository.ping.side_effect = ConnectionError("could not connect to db.internal:5432")
+    repository.ping.side_effect = ConnectionError(
+        "could not connect to db.internal:5432"
+    )
     repository.get_pgvector_version.side_effect = ConnectionError(
         "could not connect to db.internal:5432"
     )

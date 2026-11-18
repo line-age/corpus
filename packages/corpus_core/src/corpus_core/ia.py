@@ -9,12 +9,20 @@ import hashlib
 import random
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Self
 
 import httpx
 
 SCRAPE_PATH = "/services/search/v1/scrape"
-SCRAPE_FIELDS = ("identifier", "date", "title", "publisher", "volume", "issue", "imagecount")
+SCRAPE_FIELDS = (
+    "identifier",
+    "date",
+    "title",
+    "publisher",
+    "volume",
+    "issue",
+    "imagecount",
+)
 SCRAPE_PAGE = 5000
 RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
 
@@ -48,7 +56,9 @@ class ItemMetadata:
 
     @property
     def restricted(self) -> bool:
-        return str(self.metadata.get("access-restricted-item", "false")).lower() == "true"
+        return (
+            str(self.metadata.get("access-restricted-item", "false")).lower() == "true"
+        )
 
 
 class IAClient:
@@ -69,7 +79,7 @@ class IAClient:
             transport=transport,
         )
 
-    async def __aenter__(self) -> "IAClient":
+    async def __aenter__(self) -> Self:
         return self
 
     async def __aexit__(self, *exc: object) -> None:
@@ -91,7 +101,9 @@ class IAClient:
                         raise IAError(f"GET {url}: HTTP {r.status_code}")
                     return r
                 if attempt == self._max_attempts:
-                    raise IAError(f"GET {url}: HTTP {r.status_code} after {attempt} attempts")
+                    raise IAError(
+                        f"GET {url}: HTTP {r.status_code} after {attempt} attempts"
+                    )
             await asyncio.sleep(min(30.0, 2**attempt) + random.random())
         raise AssertionError("unreachable")
 
@@ -121,7 +133,9 @@ class IAClient:
             IAFile(f["name"], int(f["size"]) if f.get("size") else None, f.get("md5"))
             for f in d.get("files", [])
         )
-        return ItemMetadata(identifier, d["server"], d["dir"], d.get("metadata", {}), files)
+        return ItemMetadata(
+            identifier, d["server"], d["dir"], d.get("metadata", {}), files
+        )
 
     async def download(self, item: ItemMetadata, f: IAFile) -> bytes:
         """One file from the item's data server, checked against IA's md5 when it has one."""

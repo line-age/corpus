@@ -56,7 +56,9 @@ def parse_date(value: Any) -> date | None:
         try:
             parts = [int(x) for x in s[:n].split("-")]
             return date(
-                parts[0], parts[1] if len(parts) > 1 else 1, parts[2] if len(parts) > 2 else 1
+                parts[0],
+                parts[1] if len(parts) > 1 else 1,
+                parts[2] if len(parts) > 2 else 1,
             )
         except (ValueError, IndexError):
             continue
@@ -78,7 +80,9 @@ class Repo:
         with self.engine.begin() as c:
             c.execute(stmt)
 
-    def upsert_items(self, collection: str, rows: Iterable[dict[str, Any]]) -> list[str]:
+    def upsert_items(
+        self, collection: str, rows: Iterable[dict[str, Any]]
+    ) -> list[str]:
         """Insert new items and update changed ones; returns the identifiers inserted or changed.
         Unchanged rows are left alone so their progress survives a re-enumeration."""
         vals = [
@@ -132,7 +136,11 @@ class Repo:
 
     def update_item(self, identifier: str, **values: Any) -> None:
         with self.engine.begin() as c:
-            c.execute(update(db.item).where(db.item.c.identifier == identifier).values(**values))
+            c.execute(
+                update(db.item)
+                .where(db.item.c.identifier == identifier)
+                .values(**values)
+            )
 
     def pending(
         self,
@@ -155,7 +163,9 @@ class Repo:
                     prev.c.status == "done",
                 ),
             )
-        q = q.outerjoin(cur, and_(cur.c.identifier == db.item.c.identifier, cur.c.stage == stage))
+        q = q.outerjoin(
+            cur, and_(cur.c.identifier == db.item.c.identifier, cur.c.stage == stage)
+        )
         if not force:
             q = q.where(
                 or_(
@@ -223,7 +233,9 @@ class Repo:
         if _clears_passages(stage, ok):
             c.execute(delete(db.passage).where(db.passage.c.identifier == identifier))
 
-    def replace_pages_and_mark(self, identifier: str, pages: Sequence[Page], version: int) -> None:
+    def replace_pages_and_mark(
+        self, identifier: str, pages: Sequence[Page], version: int
+    ) -> None:
         with self.engine.begin() as c:
             c.execute(delete(db.passage).where(db.passage.c.identifier == identifier))
             c.execute(delete(db.page).where(db.page.c.identifier == identifier))
@@ -248,7 +260,11 @@ class Repo:
             self._mark(c, identifier, "pages", True, None)
 
     def pages(self, identifier: str) -> list[dict[str, Any]]:
-        q = select(db.page).where(db.page.c.identifier == identifier).order_by(db.page.c.leaf)
+        q = (
+            select(db.page)
+            .where(db.page.c.identifier == identifier)
+            .order_by(db.page.c.leaf)
+        )
         with self.engine.connect() as c:
             return [dict(r) for r in c.execute(q).mappings()]
 
@@ -294,7 +310,9 @@ class Repo:
 
     def ensure_bm25(self) -> None:
         with self.engine.begin() as c:
-            has = c.execute(text("SELECT 1 FROM pg_extension WHERE extname = 'pg_search'")).first()
+            has = c.execute(
+                text("SELECT 1 FROM pg_extension WHERE extname = 'pg_search'")
+            ).first()
             if not has:
                 c.execute(text("CREATE EXTENSION pg_search"))
             c.execute(text(db.BM25_DDL))
@@ -325,7 +343,11 @@ class Repo:
         return idents
 
     def outside_window(self, collection: str | None = None) -> int:
-        q = select(func.count()).select_from(db.item).where(~_in_window(db.item.c.issue_date))
+        q = (
+            select(func.count())
+            .select_from(db.item)
+            .where(~_in_window(db.item.c.issue_date))
+        )
         if collection:
             q = q.where(db.item.c.collection == collection)
         with self.engine.connect() as c:
@@ -333,7 +355,11 @@ class Repo:
 
     def status(self, collection: str | None = None) -> list[dict[str, Any]]:
         q = (
-            select(db.stage_state.c.stage, db.stage_state.c.status, func.count().label("items"))
+            select(
+                db.stage_state.c.stage,
+                db.stage_state.c.status,
+                func.count().label("items"),
+            )
             .join(db.item, db.item.c.identifier == db.stage_state.c.identifier)
             .group_by(db.stage_state.c.stage, db.stage_state.c.status)
         )
@@ -352,7 +378,9 @@ class Repo:
         with self.engine.connect() as c:
             return [dict(r) for r in c.execute(q).mappings()]
 
-    def sample_pages(self, n: int, collection: str | None = None) -> list[dict[str, Any]]:
+    def sample_pages(
+        self, n: int, collection: str | None = None
+    ) -> list[dict[str, Any]]:
         q = (
             select(
                 db.page.c.identifier,

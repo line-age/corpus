@@ -42,7 +42,9 @@ def test_issue_index_and_other_titles():
     )
     assert (
         classify(
-            PGJ, "sim_pipeline-gas-journal_1956-02_46", "American Gas Merchandising 1956-02: Iss 46"
+            PGJ,
+            "sim_pipeline-gas-journal_1956-02_46",
+            "American Gas Merchandising 1956-02: Iss 46",
         )
         == Kind.OTHER
     )
@@ -50,7 +52,9 @@ def test_issue_index_and_other_titles():
 
 def test_world_oil_keeps_its_earlier_name():
     assert (
-        classify("pub_world-oil", "sim_world-oil_1935-01-03", "The Oil Weekly 1935-01-03")
+        classify(
+            "pub_world-oil", "sim_world-oil_1935-01-03", "The Oil Weekly 1935-01-03"
+        )
         == Kind.ISSUE
     )
 

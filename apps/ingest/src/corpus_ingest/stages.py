@@ -52,12 +52,14 @@ def _select(repo: Repo, stage: str, sel: Selection) -> list[str]:
     return repo.pending(stage, sel.collection, sel.identifiers, sel.limit, sel.force)
 
 
-def _per_item(repo: Repo, stage: str, sel: Selection, fn: Callable[[str], None]) -> Result:
+def _per_item(
+    repo: Repo, stage: str, sel: Selection, fn: Callable[[str], None]
+) -> Result:
     res = Result(stage)
     for ident in _select(repo, stage, sel):
         try:
             fn(ident)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             repo.mark(ident, stage, ok=False, error=f"{type(e).__name__}: {e}")
             res.fail(ident, str(e))
             log.warning("stage_failed", stage=stage, identifier=ident, error=str(e))
@@ -74,7 +76,9 @@ async def enumerate_collection(
         raise ValueError(f"{collection} is excluded (Legend decision 0015)")
     spec = COLLECTIONS.get(collection)
     if spec is None:
-        raise ValueError(f"unknown collection {collection}; add it to corpus_core.collections")
+        raise ValueError(
+            f"unknown collection {collection}; add it to corpus_core.collections"
+        )
     repo.ensure_publication(collection, spec.name, spec.authority_tier)
     res = Result("enumerate")
     wanted = set(identifiers) if identifiers is not None else None
@@ -83,7 +87,9 @@ async def enumerate_collection(
     def flush() -> None:
         # Marking resets later stages, so only new or changed items are marked.
         changed = set(repo.upsert_items(collection, batch))
-        never_marked = set(repo.without_stage([r["identifier"] for r in batch], "enumerate"))
+        never_marked = set(
+            repo.without_stage([r["identifier"] for r in batch], "enumerate")
+        )
         for ident in sorted(changed | never_marked):
             repo.mark(ident, "enumerate", ok=True)
             res.ok()
@@ -105,7 +111,11 @@ def classify_stage(repo: Repo, sel: Selection) -> Result:
         it = repo.item(ident)
         spec = COLLECTIONS.get(it["collection"])
         kind = classify(it["collection"], ident, it["title"])
-        if spec and it["publisher"] and not spec.publisher_pattern.search(it["publisher"]):
+        if (
+            spec
+            and it["publisher"]
+            and not spec.publisher_pattern.search(it["publisher"])
+        ):
             kind = Kind.OTHER
         repo.update_item(ident, kind=str(kind))
 
@@ -163,7 +173,11 @@ async def mirror_stage(
                     if body is None or not store.put(key, body):
                         body = store.get(key)
                     kept.append(
-                        {"name": f.name, "size": len(body), "md5": hashlib.md5(body).hexdigest()}
+                        {
+                            "name": f.name,
+                            "size": len(body),
+                            "md5": hashlib.md5(body).hexdigest(),
+                        }
                     )
                 repo.update_item(
                     ident,
@@ -172,10 +186,12 @@ async def mirror_stage(
                     files=kept,
                     restricted=str(meta.restricted).lower(),
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 repo.mark(ident, "mirror", ok=False, error=f"{type(e).__name__}: {e}")
                 res.fail(ident, str(e))
-                log.warning("stage_failed", stage="mirror", identifier=ident, error=str(e))
+                log.warning(
+                    "stage_failed", stage="mirror", identifier=ident, error=str(e)
+                )
             else:
                 repo.mark(ident, "mirror", ok=True)
                 res.ok()
@@ -188,7 +204,9 @@ def _parse(args: tuple[bytes, bytes | None]) -> list[Page]:
     return parse_hocr(*args)
 
 
-def pages_stage(repo: Repo, store: RawStore, sel: Selection, workers: int = 1) -> Result:
+def pages_stage(
+    repo: Repo, store: RawStore, sel: Selection, workers: int = 1
+) -> Result:
     res = Result("pages")
     idents = _select(repo, "pages", sel)
     version = BY_NAME["pages"].version
@@ -201,7 +219,9 @@ def pages_stage(repo: Repo, store: RawStore, sel: Selection, workers: int = 1) -
 
     def record(ident: str, pages: list[Page] | Exception) -> None:
         if isinstance(pages, Exception):
-            repo.mark(ident, "pages", ok=False, error=f"{type(pages).__name__}: {pages}")
+            repo.mark(
+                ident, "pages", ok=False, error=f"{type(pages).__name__}: {pages}"
+            )
             res.fail(ident, str(pages))
             return
         repo.replace_pages_and_mark(ident, pages, version)
@@ -211,7 +231,7 @@ def pages_stage(repo: Repo, store: RawStore, sel: Selection, workers: int = 1) -
         for ident in idents:
             try:
                 record(ident, _parse(load(ident)))
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 record(ident, e)
         return res
 
@@ -222,12 +242,12 @@ def pages_stage(repo: Repo, store: RawStore, sel: Selection, workers: int = 1) -
             for ident in idents[start : start + 2 * workers]:
                 try:
                     futures[ident] = pool.submit(_parse, load(ident))
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     record(ident, e)
             for ident, fut in futures.items():
                 try:
                     record(ident, fut.result())
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     record(ident, e)
     return res
 
@@ -235,7 +255,8 @@ def pages_stage(repo: Repo, store: RawStore, sel: Selection, workers: int = 1) -
 def normalise_stage(repo: Repo, sel: Selection) -> Result:
     def fn(ident: str) -> None:
         texts = {
-            p["leaf"]: search_text(p["raw_text"], drop_running_head=True) for p in repo.pages(ident)
+            p["leaf"]: search_text(p["raw_text"], drop_running_head=True)
+            for p in repo.pages(ident)
         }
         repo.set_search_texts(ident, texts)
 

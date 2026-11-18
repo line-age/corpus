@@ -18,7 +18,9 @@ def is_running_head(line: str) -> bool:
     if not letters or len(line.split()) > 14:
         return False
     caps_share = len(_CAPS.findall(line)) / len(letters)
-    return caps_share >= 0.6 and (bool(_DIGITS.search(line)) or "JOURNAL" in line.upper())
+    return caps_share >= 0.6 and (
+        bool(_DIGITS.search(line)) or "JOURNAL" in line.upper()
+    )
 
 
 def dehyphenate(text: str) -> str:

@@ -28,7 +28,9 @@ class HealthService:
             "database": self._check_database,
             "pgvector": self._check_pgvector,
         }
-        results = await asyncio.gather(*(self._run(name, check) for name, check in checks.items()))
+        results = await asyncio.gather(
+            *(self._run(name, check) for name, check in checks.items())
+        )
         by_name = dict(zip(checks, results, strict=True))
         healthy = all(result.status == "ok" for result in by_name.values())
         return HealthResponse(
@@ -56,7 +58,7 @@ class HealthService:
             state = "ok"
         except CheckFailed as exc:
             state, detail = "error", str(exc)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             state = "error"
             # Only this deadline is a timeout. A TimeoutError from inside the check, such as
             # a socket's or a nested asyncio timeout's, is an ordinary failure.

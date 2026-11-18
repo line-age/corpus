@@ -58,7 +58,9 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("identifier"),
     )
-    op.create_index("item_collection_date", "item", ["collection", "issue_date"], unique=False)
+    op.create_index(
+        "item_collection_date", "item", ["collection", "issue_date"], unique=False
+    )
     op.create_table(
         "stage_state",
         sa.Column("identifier", sa.String(), nullable=False),
@@ -73,10 +75,14 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["identifier"], ["item.identifier"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["identifier"], ["item.identifier"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("identifier", "stage"),
     )
-    op.create_index("stage_state_stage_status", "stage_state", ["stage", "status"], unique=False)
+    op.create_index(
+        "stage_state_stage_status", "stage_state", ["stage", "status"], unique=False
+    )
     op.create_table(
         "page",
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
@@ -90,7 +96,9 @@ def upgrade() -> None:
         sa.Column("text_hash", sa.String(length=64), nullable=False),
         sa.Column("duplicate_of_leaf", sa.Integer(), nullable=True),
         sa.Column("pipeline_version", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(["identifier"], ["item.identifier"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["identifier"], ["item.identifier"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("identifier", "leaf"),
     )
@@ -109,7 +117,9 @@ def upgrade() -> None:
         sa.Column("kind", sa.String(), nullable=False),
         sa.Column("license_lane", sa.String(), nullable=False),
         sa.Column("pipeline_version", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(["identifier"], ["item.identifier"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["identifier"], ["item.identifier"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("identifier", "leaf", "seq"),
     )

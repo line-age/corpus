@@ -20,7 +20,9 @@ LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     # API
     docs_enabled: bool = False
@@ -62,7 +64,9 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _max_connections_cover_pool(self) -> Self:
         if self.postgres_max_connections < self.postgres_pool_size:
-            raise ValueError("POSTGRES_MAX_CONNECTIONS must be at least POSTGRES_POOL_SIZE")
+            raise ValueError(
+                "POSTGRES_MAX_CONNECTIONS must be at least POSTGRES_POOL_SIZE"
+            )
         return self
 
     # Ingest

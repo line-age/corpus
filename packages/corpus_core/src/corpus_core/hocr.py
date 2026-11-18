@@ -54,7 +54,9 @@ def parse_page_numbers(data: bytes | None) -> list[tuple[int, str | None]]:
     return sorted(out)
 
 
-def _printed_for(leaves: list[int], numbers: list[tuple[int, str | None]]) -> dict[int, str]:
+def _printed_for(
+    leaves: list[int], numbers: list[tuple[int, str | None]]
+) -> dict[int, str]:
     """Map hOCR leaves to printed numbers. When both files list the same number of pages they
     describe the same pages in the same order, so match by position; that survives leaves the
     hOCR numbers differently from the scan. Otherwise fall back to matching leaf numbers."""
@@ -69,7 +71,9 @@ def parse_hocr(hocr: bytes, page_numbers: bytes | None = None) -> list[Page]:
     page_els = root.xpath('//*[contains(@class, "ocr_page")]')
     leaves: list[int] = []
     for idx, page_el in enumerate(page_els):
-        m = _PAGE_ID.match(page_el.get("id", "")) or _PPAGENO.search(page_el.get("title", ""))
+        m = _PAGE_ID.match(page_el.get("id", "")) or _PPAGENO.search(
+            page_el.get("title", "")
+        )
         leaves.append(int(m.group(1)) if m else idx)
     if len(set(leaves)) != len(leaves):
         raise ValueError("hOCR leaf numbers are not unique")

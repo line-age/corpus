@@ -14,7 +14,8 @@ async def test_scrape_follows_the_cursor():
     route = respx.get(f"{BASE}/services/search/v1/scrape")
     route.side_effect = [
         httpx.Response(
-            200, json={"items": [{"identifier": "a"}, {"identifier": "b"}], "cursor": "c1"}
+            200,
+            json={"items": [{"identifier": "a"}, {"identifier": "b"}], "cursor": "c1"},
         ),
         httpx.Response(200, json={"items": [{"identifier": "c"}]}),
     ]
@@ -45,7 +46,9 @@ async def test_metadata_download_and_checksums(monkeypatch):
     )
     data = respx.get("https://ia800.us.archive.org/1/items/item1/item1_hocr.html")
     data.side_effect = [httpx.Response(503), httpx.Response(200, content=body)]
-    respx.get("https://ia800.us.archive.org/1/items/item1/item1_bad.txt").respond(content=b"abc")
+    respx.get("https://ia800.us.archive.org/1/items/item1/item1_bad.txt").respond(
+        content=b"abc"
+    )
     async with IAClient(BASE) as ia:
         meta = await ia.metadata("item1")
         assert not meta.restricted
@@ -79,6 +82,8 @@ def test_local_store(tmp_path):
     assert st.put(k, b"x") is True
     assert st.put(k, b"y") is False  # write-once: the first copy stays
     assert st.exists(k) and st.get(k) == b"x"
-    assert [p.name for p in (tmp_path / "raw/pub_x/item1").iterdir()] == ["item1_hocr.html"]
+    assert [p.name for p in (tmp_path / "raw/pub_x/item1").iterdir()] == [
+        "item1_hocr.html"
+    ]
     with pytest.raises(ValueError):
         st.put("../../etc/passwd", b"no")

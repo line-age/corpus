@@ -21,7 +21,9 @@ class Passage:
     search_text: str
 
 
-def passages(raw: str, window: int = WINDOW_WORDS, overlap: int = OVERLAP_WORDS) -> list[Passage]:
+def passages(
+    raw: str, window: int = WINDOW_WORDS, overlap: int = OVERLAP_WORDS
+) -> list[Passage]:
     if not 0 <= overlap < window:
         raise ValueError("overlap must be smaller than the window")
     spans = [m.span() for m in _WORD.finditer(raw)]

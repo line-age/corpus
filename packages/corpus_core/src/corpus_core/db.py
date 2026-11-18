@@ -52,7 +52,12 @@ item = Table(
     Column("dir", String),
     Column("files", JSONB),  # mirrored files: name, size, md5
     Column("restricted", String),
-    Column("enumerated_at", DateTime(timezone=True), server_default=func.now(), nullable=False),
+    Column(
+        "enumerated_at",
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    ),
     Index("item_collection_date", "collection", "issue_date"),
 )
 
@@ -65,7 +70,9 @@ stage_state = Table(
     Column("pipeline_version", Integer, nullable=False),
     Column("attempts", Integer, nullable=False, server_default="0"),
     Column("error", Text),
-    Column("updated_at", DateTime(timezone=True), server_default=func.now(), nullable=False),
+    Column(
+        "updated_at", DateTime(timezone=True), server_default=func.now(), nullable=False
+    ),
     PrimaryKeyConstraint("identifier", "stage"),
     Index("stage_state_stage_status", "stage", "status"),
 )
@@ -74,7 +81,12 @@ page = Table(
     "page",
     metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),
-    Column("identifier", String, ForeignKey("item.identifier", ondelete="CASCADE"), nullable=False),
+    Column(
+        "identifier",
+        String,
+        ForeignKey("item.identifier", ondelete="CASCADE"),
+        nullable=False,
+    ),
     Column("leaf", Integer, nullable=False),
     Column("printed_page", String),
     Column("raw_text", Text, nullable=False),
@@ -91,7 +103,12 @@ passage = Table(
     "passage",
     metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),
-    Column("identifier", String, ForeignKey("item.identifier", ondelete="CASCADE"), nullable=False),
+    Column(
+        "identifier",
+        String,
+        ForeignKey("item.identifier", ondelete="CASCADE"),
+        nullable=False,
+    ),
     Column("leaf", Integer, nullable=False),
     Column("seq", Integer, nullable=False),
     Column("char_start", Integer, nullable=False),

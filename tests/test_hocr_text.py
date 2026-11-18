@@ -11,9 +11,15 @@ def test_pages_from_hocr(hocr_bytes, page_numbers_bytes):
     pages = parse_hocr(hocr_bytes, page_numbers_bytes)
     assert [p.leaf for p in pages] == [0, 1, 2]
     p0, p1, p2 = pages
-    assert p0.raw_text.startswith("AMERICAN GAS LIGHT JOURNAL. 161\n\nThe gas works at Noble")
+    assert p0.raw_text.startswith(
+        "AMERICAN GAS LIGHT JOURNAL. 161\n\nThe gas works at Noble"
+    )
     assert "were or-\nganized" in p0.raw_text  # raw keeps the line break exactly
-    assert p0.printed_page == "161" and p1.printed_page is None and p2.printed_page == "163"
+    assert (
+        p0.printed_page == "161"
+        and p1.printed_page is None
+        and p2.printed_page == "163"
+    )
     assert p0.duplicate_of_leaf is None and p1.duplicate_of_leaf == 0
     assert p2.duplicate_of_leaf is None  # too short to call a duplicate
     assert p0.word_count == len(p0.raw_text.split())
@@ -49,7 +55,9 @@ def test_dehyphenate():
 
 
 def _words(n: int) -> str:
-    return "\n".join(" ".join(f"w{i}" for i in range(j, min(j + 7, n))) for j in range(0, n, 7))
+    return "\n".join(
+        " ".join(f"w{i}" for i in range(j, min(j + 7, n))) for j in range(0, n, 7)
+    )
 
 
 @pytest.mark.parametrize("n", [1, 39, 250, 251, 290, 300, 1000, 1037])
@@ -96,7 +104,9 @@ def test_headers_captions_and_floats_are_kept():
 
 def test_printed_numbers_match_by_position_when_counts_agree():
     # hOCR numbers its pages 3 and 4; the page-number file uses scan leaves 7 and 8
-    numbers = b'{"pages":[{"leafNum":7,"pageNumber":"12"},{"leafNum":8,"pageNumber":""}]}'
+    numbers = (
+        b'{"pages":[{"leafNum":7,"pageNumber":"12"},{"leafNum":8,"pageNumber":""}]}'
+    )
     p = parse_hocr(HOCR_HEADER, numbers)
     assert [x.printed_page for x in p] == ["12", None]
 

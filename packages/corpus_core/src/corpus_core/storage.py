@@ -51,7 +51,9 @@ class LocalStore:
 
 
 class S3Store:
-    def __init__(self, bucket: str, prefix: str = "", endpoint_url: str | None = None) -> None:
+    def __init__(
+        self, bucket: str, prefix: str = "", endpoint_url: str | None = None
+    ) -> None:
         import boto3
 
         self.bucket, self.prefix = bucket, prefix.strip("/")
@@ -64,7 +66,9 @@ class S3Store:
         from botocore.exceptions import ClientError
 
         try:  # conditional write: refused if the key already exists
-            self._s3.put_object(Bucket=self.bucket, Key=self._k(key), Body=data, IfNoneMatch="*")
+            self._s3.put_object(
+                Bucket=self.bucket, Key=self._k(key), Body=data, IfNoneMatch="*"
+            )
         except ClientError as e:
             if e.response.get("Error", {}).get("Code") in {"PreconditionFailed", "412"}:
                 return False
@@ -81,7 +85,11 @@ class S3Store:
             self._s3.head_object(Bucket=self.bucket, Key=self._k(key))
             return True
         except ClientError as e:
-            if e.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
+            if e.response.get("Error", {}).get("Code") in {
+                "404",
+                "NoSuchKey",
+                "NotFound",
+            }:
                 return False
             raise
 

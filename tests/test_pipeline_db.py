@@ -74,7 +74,9 @@ def _mock_ia(hocr: bytes, page_numbers: bytes) -> None:
             }
         )
         for n, b in files.items():
-            respx.get(f"https://ia1.us.archive.org/1/items/{ident}/{n}").respond(content=b)
+            respx.get(f"https://ia1.us.archive.org/1/items/{ident}/{n}").respond(
+                content=b
+            )
 
 
 @respx.mock
@@ -94,8 +96,12 @@ async def test_every_stage(repo, tmp_path, hocr_bytes, page_numbers_bytes):
     issue = repo.item(ITEMS[0]["identifier"])
     other = repo.item(ITEMS[1]["identifier"])
     assert (issue["kind"], other["kind"]) == ("issue", "other")
-    assert issue["license_lane"] == "public-domain" and issue["lane_status"] == "confirmed"
-    assert other["license_lane"] == "public-domain" and other["lane_status"] == "to-verify"
+    assert (
+        issue["license_lane"] == "public-domain" and issue["lane_status"] == "confirmed"
+    )
+    assert (
+        other["license_lane"] == "public-domain" and other["lane_status"] == "to-verify"
+    )
     assert {f["name"] for f in issue["files"]} == {
         f"{ITEMS[0]['identifier']}_hocr.html",
         f"{ITEMS[0]['identifier']}_page_numbers.json",
@@ -128,7 +134,9 @@ async def test_every_stage(repo, tmp_path, hocr_bytes, page_numbers_bytes):
         again = await S.enumerate_collection(repo, ia, PGJ)
     assert (again.done, again.skipped) == (0, 2)
     assert repo.pending("classify", PGJ) == [] and repo.pending("index", PGJ) != []
-    assert repo.pending("pages", PGJ, identifiers=[]) == []  # empty --ids selects nothing
+    assert (
+        repo.pending("pages", PGJ, identifiers=[]) == []
+    )  # empty --ids selects nothing
 
     # re-laning an item withdraws its passages until they are rebuilt
     repo.mark(ITEMS[0]["identifier"], "lane", ok=True)
@@ -136,7 +144,9 @@ async def test_every_stage(repo, tmp_path, hocr_bytes, page_numbers_bytes):
         left = c.execute(select(func.count()).select_from(db.passage)).scalar_one()
     assert left == 0
     async with IAClient(BASE) as ia:
-        assert (await S.mirror_stage(repo, ia, store, sel)).done == 1  # files already in lake
+        assert (
+            await S.mirror_stage(repo, ia, store, sel)
+        ).done == 1  # files already in lake
     for stage in (
         S.pages_stage(repo, store, sel),
         S.normalise_stage(repo, sel),
@@ -162,7 +172,9 @@ async def test_every_stage(repo, tmp_path, hocr_bytes, page_numbers_bytes):
         assert S.index_stage(repo, sel).done == 1
         with repo.engine.connect() as c:
             hits = c.execute(
-                text("SELECT count(*) FROM passage WHERE search_text @@@ 'Martinsville'")
+                text(
+                    "SELECT count(*) FROM passage WHERE search_text @@@ 'Martinsville'"
+                )
             ).scalar_one()
         assert hits >= 1
 
@@ -174,7 +186,11 @@ def test_items_outside_the_window_stop_after_lane_and_are_withdrawn(repo):
         "identifier": "sim_pipeline-gas-journal_1879-01-02_30",
         "date": "1879-01-02",
     }
-    late = {**ITEMS[0], "identifier": "sim_pipeline-gas-journal_1965_index", "date": "1965-01-01"}
+    late = {
+        **ITEMS[0],
+        "identifier": "sim_pipeline-gas-journal_1965_index",
+        "date": "1965-01-01",
+    }
     undated = {**ITEMS[0], "identifier": "sim_pipeline-gas-journal_undated"}
     del undated["date"]
     repo.upsert_items(PGJ, [ITEMS[0], early, late, undated])

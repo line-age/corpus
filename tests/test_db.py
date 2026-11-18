@@ -13,7 +13,9 @@ def test_get_session_injects_a_session_on_the_configured_database(migrated_db):
     app = create_app()
 
     @app.get("/_test/current-database")
-    async def current_database(session: Annotated[AsyncSession, Depends(get_session)]) -> str:
+    async def current_database(
+        session: Annotated[AsyncSession, Depends(get_session)],
+    ) -> str:
         return await session.scalar(text("SELECT current_database()"))
 
     with TestClient(app) as client:

@@ -6,7 +6,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="CORPUS_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="CORPUS_", env_file=".env", extra="ignore"
+    )
 
     database_url: str = "postgresql+psycopg://corpus:corpus@localhost:5432/corpus"
     # file:///path for a local lake, s3://bucket[/prefix] for object storage

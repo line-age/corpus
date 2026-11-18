@@ -51,7 +51,10 @@ def create_app() -> FastAPI:
     @app.get("/", tags=["meta"])
     async def index() -> IndexResponse:
         return IndexResponse(
-            name="corpus", description=DESCRIPTION, version=__version__, docs=app.docs_url
+            name="corpus",
+            description=DESCRIPTION,
+            version=__version__,
+            docs=app.docs_url,
         )
 
     app.include_router(health_router)

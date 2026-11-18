@@ -25,7 +25,11 @@ logger = logging.getLogger("corpus")
 
 # Attributes every LogRecord has, so anything else on a record came from `extra=`.
 # color_message is an extra uvicorn adds to some records: the message with ANSI colours.
-_NOT_EXTRA = frozenset(vars(logging.makeLogRecord({}))) | {"message", "asctime", "color_message"}
+_NOT_EXTRA = frozenset(vars(logging.makeLogRecord({}))) | {
+    "message",
+    "asctime",
+    "color_message",
+}
 
 
 class JsonFormatter(logging.Formatter):

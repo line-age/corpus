@@ -67,11 +67,16 @@ the structure of `modules/health/`, or `modules/search/`.
 The providers in `router.py` connect the layers, and FastAPI injects the result:
 
 ```python
-def get_search_service(session: Annotated[AsyncSession, Depends(get_session)]) -> SearchService:
+def get_search_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> SearchService:
     return SearchService(SearchRepository(session))
 
+
 @router.get("")
-async def search(service: Annotated[SearchService, Depends(get_search_service)]) -> SearchResponse: ...
+async def search(
+    service: Annotated[SearchService, Depends(get_search_service)],
+) -> SearchResponse: ...
 ```
 
 Mount a new router in `create_app()` in `api/main.py` with `app.include_router(...)`.

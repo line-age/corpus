@@ -18,11 +18,19 @@ from corpus_core.storage import open_store
 from corpus_ingest import stages as S
 from corpus_ingest.repo import STAGES, Repo
 
-app = typer.Typer(help="Mirror the trade press from Internet Archive into a searchable index.")
+app = typer.Typer(
+    help="Mirror the trade press from Internet Archive into a searchable index."
+)
 
-Collection = Annotated[str | None, typer.Option("--collection", "-c", help="IA collection id")]
-Ids = Annotated[Path | None, typer.Option("--ids", help="file of identifiers, one per line")]
-Limit = Annotated[int | None, typer.Option("--limit", "-n", help="at most this many items")]
+Collection = Annotated[
+    str | None, typer.Option("--collection", "-c", help="IA collection id")
+]
+Ids = Annotated[
+    Path | None, typer.Option("--ids", help="file of identifiers, one per line")
+]
+Limit = Annotated[
+    int | None, typer.Option("--limit", "-n", help="at most this many items")
+]
 Force = Annotated[bool, typer.Option("--force", help="redo items already done")]
 
 
@@ -48,7 +56,9 @@ def _ids(path: Path | None) -> list[str] | None:
     return [ln for ln in lines if ln]
 
 
-def _sel(collection: str | None, ids: Path | None, limit: int | None, force: bool) -> S.Selection:
+def _sel(
+    collection: str | None, ids: Path | None, limit: int | None, force: bool
+) -> S.Selection:
     return S.Selection(collection, _ids(ids), limit, force)
 
 
@@ -62,7 +72,10 @@ def _report(res: S.Result) -> None:
 @app.callback()
 def _setup() -> None:
     structlog.configure(
-        processors=[structlog.processors.TimeStamper(fmt="iso"), structlog.dev.ConsoleRenderer()],
+        processors=[
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.dev.ConsoleRenderer(),
+        ],
         logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
     )
 
@@ -82,7 +95,10 @@ def enumerate_cmd(
 
 @app.command()
 def classify(
-    collection: Collection = None, ids: Ids = None, limit: Limit = None, force: Force = False
+    collection: Collection = None,
+    ids: Ids = None,
+    limit: Limit = None,
+    force: Force = False,
 ) -> None:
     """Record each item's kind: issue, index, supplement or other."""
     _report(S.classify_stage(_repo(), _sel(collection, ids, limit, force)))
@@ -90,7 +106,10 @@ def classify(
 
 @app.command()
 def lane(
-    collection: Collection = None, ids: Ids = None, limit: Limit = None, force: Force = False
+    collection: Collection = None,
+    ids: Ids = None,
+    limit: Limit = None,
+    force: Force = False,
 ) -> None:
     """Record license and retrieval lanes (controlplane I-0006)."""
     _report(S.lane_stage(_repo(), _sel(collection, ids, limit, force)))
@@ -98,7 +117,10 @@ def lane(
 
 @app.command()
 def mirror(
-    collection: Collection = None, ids: Ids = None, limit: Limit = None, force: Force = False
+    collection: Collection = None,
+    ids: Ids = None,
+    limit: Limit = None,
+    force: Force = False,
 ) -> None:
     """Copy each item's hOCR, page numbers, text and meta files into the raw lake."""
 
@@ -126,12 +148,17 @@ def pages(
     ),
 ) -> None:
     """Split each mirrored item into one row per leaf."""
-    _report(S.pages_stage(_repo(), _store(), _sel(collection, ids, limit, force), workers))
+    _report(
+        S.pages_stage(_repo(), _store(), _sel(collection, ids, limit, force), workers)
+    )
 
 
 @app.command()
 def normalise(
-    collection: Collection = None, ids: Ids = None, limit: Limit = None, force: Force = False
+    collection: Collection = None,
+    ids: Ids = None,
+    limit: Limit = None,
+    force: Force = False,
 ) -> None:
     """Derive each page's search text. Raw text is untouched."""
     _report(S.normalise_stage(_repo(), _sel(collection, ids, limit, force)))
@@ -139,7 +166,10 @@ def normalise(
 
 @app.command("passages")
 def passages_cmd(
-    collection: Collection = None, ids: Ids = None, limit: Limit = None, force: Force = False
+    collection: Collection = None,
+    ids: Ids = None,
+    limit: Limit = None,
+    force: Force = False,
 ) -> None:
     """Cut indexed kinds into overlapping passages with offsets into raw text."""
     _report(S.passages_stage(_repo(), _sel(collection, ids, limit, force)))
@@ -147,7 +177,10 @@ def passages_cmd(
 
 @app.command()
 def index(
-    collection: Collection = None, ids: Ids = None, limit: Limit = None, force: Force = False
+    collection: Collection = None,
+    ids: Ids = None,
+    limit: Limit = None,
+    force: Force = False,
 ) -> None:
     """Make sure the BM25 index exists and record items as searchable."""
     _report(S.index_stage(_repo(), _sel(collection, ids, limit, force)))
@@ -158,7 +191,9 @@ def run(
     collection: Annotated[str, typer.Option("--collection", "-c")],
     ids: Ids = None,
     limit: Limit = None,
-    skip_enumerate: Annotated[bool, typer.Option(help="items are already listed")] = False,
+    skip_enumerate: Annotated[
+        bool, typer.Option(help="items are already listed")
+    ] = False,
 ) -> None:
     """Every stage in order for one collection. Safe to re-run; done items are skipped."""
     ident_list = _ids(ids)
@@ -169,7 +204,9 @@ def run(
         out = []
         async with _ia() as ia:
             if not skip_enumerate:
-                out.append(await S.enumerate_collection(repo, ia, collection, ident_list))
+                out.append(
+                    await S.enumerate_collection(repo, ia, collection, ident_list)
+                )
             out.append(S.classify_stage(repo, sel))
             out.append(S.lane_stage(repo, sel))
             out.append(await S.mirror_stage(repo, ia, store, sel, cfg.concurrency))
@@ -191,7 +228,10 @@ def status(collection: Collection = None) -> None:
     counts = {(r["stage"], r["status"]): r["items"] for r in repo.status(collection)}
     typer.echo(f"{'stage':<10} {'done':>8} {'failed':>8}")
     for st in STAGES:
-        done, failed = counts.get((st.name, "done"), 0), counts.get((st.name, "failed"), 0)
+        done, failed = (
+            counts.get((st.name, "done"), 0),
+            counts.get((st.name, "failed"), 0),
+        )
         typer.echo(f"{st.name:<10} {done:>8} {failed:>8}")
     outside = repo.outside_window(collection)
     if outside:

@@ -9,7 +9,9 @@ def test_engine_pool_follows_settings():
     engine = make_engine(Settings(postgres_pool_size=3, postgres_max_connections=8))
 
     assert engine.pool.size() == 3
-    assert engine.pool._max_overflow == 5  # no public accessor; max connections minus pool
+    assert (
+        engine.pool._max_overflow == 5
+    )  # no public accessor; max connections minus pool
 
 
 def test_max_connections_equal_to_pool_size_means_no_overflow():

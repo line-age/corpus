@@ -33,7 +33,6 @@ from corpus.config import Settings
 
 class Base(DeclarativeBase):
     """Base class for ORM models. Its metadata is what Alembic autogenerate compares against."""
-    pass
 
 
 def make_engine(settings: Settings) -> AsyncEngine:
