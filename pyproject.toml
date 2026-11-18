@@ -21,6 +21,7 @@ dev = [
     "corpus-ingest",
     "pytest-asyncio>=0.24",
     "respx>=0.21",
+    "ruff>=0.9",
 ]
 
 [tool.uv.workspace]
