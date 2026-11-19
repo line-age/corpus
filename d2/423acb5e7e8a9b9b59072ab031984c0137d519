@@ -1,0 +1,16 @@
+README.md
+  h_677ed464d6b3fb 31-32,48,96-163
+.env.example
+  h_677ed464d6b3fb 41-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "d2423acb5e7e8a9b9b59072ab031984c0137d519",
+  "prompts": {},
+  "humans": {
+    "h_677ed464d6b3fb": {
+      "author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  }
+}
