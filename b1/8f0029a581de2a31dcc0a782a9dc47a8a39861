@@ -1,0 +1,14 @@
+migrations/versions/2026_11_16_0003_add_documents_and_pages.py
+  h_677ed464d6b3fb 3-4,13-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "b18f0029a581de2a31dcc0a782a9dc47a8a39861",
+  "prompts": {},
+  "humans": {
+    "h_677ed464d6b3fb": {
+      "author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  }
+}
