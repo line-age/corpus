@@ -45,14 +45,15 @@ default), interactive docs are at <http://localhost:9001/docs>.
 | `make test` | Run pytest in a container; pass options with `ARGS="-k health"` |
 | `make db-migrate` | Apply Alembic migrations (`alembic upgrade head`) |
 | `make lock` | Update `uv.lock` after changing dependencies in `pyproject.toml` |
-| `make ingest ITEM=<id>` | Ingest an archive.org item's OCR text; `ARGS="--collection <name> ..."` for collections (see [Ingest](#ingest)) |
+| `make ingest ITEM=<id>` | Ingest an archive.org item's OCR text; `ARGS="--collection <name> ..."` for collections (see [Ingest](#ingest)). To be removed soon in favor of the `corpus-ingest` target |
+| `make corpus-ingest ARGS="<command> ..."` | Run the `apps/ingest` pipeline CLI in compose, rebuilding its image first; no `ARGS` shows its help |
 
 Tests use their own databases (`<POSTGRES_DB>_test` and `<POSTGRES_DB>_test_bare`), recreated
 on every run, so they never touch development data.
 
-## Ingest
+## Ingestion Pipelikne
 
-Ingest is being built. The plan is [docs/ingestion-plan.md](docs/ingestion-plan.md).
+The Ingestion pipeline is being built. The plan is [docs/ingestion-plan.md](docs/ingestion-plan.md).
 
 Only issues dated 1920-1961 are mirrored and indexed; the rest are listed but stop after the
 lane stage. The plan explains the window.
@@ -69,13 +70,14 @@ fixtures/               identifier lists for real runs
 Ingest has its own database, `corpus-ingest-db` (ParadeDB, for `pg_search`), which `make up`
 starts alongside the API's. Both share one migration history in `migrations/`, and
 `make db-migrate` applies it to both. Ingest needs outbound HTTPS to `archive.org` and
-`*.us.archive.org`. Run it in compose (raw files go to the `corpus-raw-data` volume):
+`*.us.archive.org`. Run it in compose with `make corpus-ingest`, which rebuilds the ingest
+image so it has your latest changes and mounts `fixtures/` at `/fixtures` (raw files go to the
+`corpus-raw-data` volume):
 
 ```sh
 make setup && make db-migrate
-docker compose run --rm -v "$PWD/fixtures:/fixtures:ro" corpus-ingest \
-  run -c pub_pipeline-gas-journal --ids /fixtures/pgj-sample-15.txt
-docker compose run --rm corpus-ingest status
+make corpus-ingest ARGS="run -c pub_pipeline-gas-journal --ids /fixtures/pgj-sample-15.txt"
+make corpus-ingest ARGS="status"
 ```
 
 or on the host with Python 3.13 and [uv](https://docs.astral.sh/uv/). `CORPUS_DATABASE_URL` in
@@ -93,8 +95,9 @@ failed items are retried up to three times, and finishing a stage for an item re
 after it. `--force` redoes items regardless. Set `CORPUS_TEST_DATABASE_URL` to run the ingest
 end-to-end test; without it, that test is skipped.
 
-## Ingest
+## Ingest (temporary)
 
+To be retired. Use the ingestion pipeline above.
 `make ingest ITEM=<identifier>` downloads an archive.org item's OCR text and stores it, one
 row per scanned page, so search results can cite their page. It runs
 `python -m corpus.ingestion <identifier> [<identifier> ...]` in the API container.
