@@ -54,8 +54,7 @@ except `get_session`, which is the FastAPI dependency. Ingest never imports from
 ## Feature modules
 
 Every feature is a package under `src/corpus/api/modules/`, split into five layers. Copy
-the structure of `modules/health/`, which is complete, or `modules/search/`, which is
-wired but empty.
+the structure of `modules/health/`, or `modules/search/`.
 
 | File | Holds | Rules |
 | --- | --- | --- |
