@@ -20,6 +20,7 @@ from sqlalchemy import create_engine, pool
 
 from corpus.config import get_settings
 from corpus.db import Base
+import corpus.models  # noqa: F401  (registers the models on Base.metadata)
 
 config = context.config
 

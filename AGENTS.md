@@ -37,7 +37,9 @@ The API is published on `localhost:${FORWARD_API_PORT}` (9001 by default).
 src/corpus/
   config.py              Settings and get_settings()
   db.py                  engine and session factories, get_session, ORM Base
+  models.py              ORM models shared by ingest and the API (documents, pages)
   lib/logger.py          the one corpus logger (JSON lines)
+  ingestion/             fetches OCR text from archive.org and stores it (`make ingest`)
   api/
     main.py              create_app(): settings, logging, lifespan, middleware, routers
     middlewares/         request logging
@@ -46,14 +48,13 @@ migrations/versions/     Alembic revisions, named YYYY_MM_DD_<rev>_<slug>.py
 tests/                   pytest; fixtures in conftest.py
 ```
 
-`lib/` and `db.py` are shared with ingest, which is still to come; keep them free of HTTP concerns, except
-`get_session`, which is the FastAPI dependency.
+`lib/`, `db.py` and `models.py` are shared with ingest; keep them free of HTTP concerns,
+except `get_session`, which is the FastAPI dependency. Ingest never imports from `api/`.
 
 ## Feature modules
 
 Every feature is a package under `src/corpus/api/modules/`, split into five layers. Copy
-the structure of `modules/health/`, which is complete, or `modules/search/`, which is
-wired but empty.
+the structure of `modules/health/`, or `modules/search/`.
 
 | File | Holds | Rules |
 | --- | --- | --- |
