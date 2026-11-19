@@ -1,0 +1,24 @@
+Makefile
+  s_09271f172f8aaf::t_aeabacaaf7baf3 3,6,19,57-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "7e73b9729179d3520b03940c95cdd09489f322f5",
+  "prompts": {},
+  "humans": {
+    "h_677ed464d6b3fb": {
+      "author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_09271f172f8aaf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7e8a98d-c7ad-4bc3-b90d-f7856da7a568",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  }
+}
