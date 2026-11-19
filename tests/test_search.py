@@ -65,7 +65,8 @@ def corpus(migrated_db: Settings) -> Iterator[dict[str, Document]]:
         engine.dispose()
 
 
-def test_returns_every_occurrence_with_citations_in_corpus_order(corpus, make_client):
+def test_returns_every_occurrence_with_citations_in_corpus_order_when_search_ranking_is_disabled(corpus, configure, make_client):
+    configure(search_ranking_enabled=False)
     response = make_client().get(URL, params={"q": "Zorbatown County"})
 
     assert response.status_code == 200
@@ -100,7 +101,8 @@ def test_returns_every_occurrence_with_citations_in_corpus_order(corpus, make_cl
     assert body["results"][1]["page"]["page_number"] is None
 
 
-def test_query_is_stripped_and_paged(corpus, make_client):
+def test_query_is_stripped_and_paged_when_search_ranking_is_disabled(corpus, configure, make_client):
+    configure(search_ranking_enabled=False)
     response = make_client().get(
         URL, params={"q": "  Zorbatown\tCounty  ", "limit": 2, "offset": 1}
     )
@@ -211,7 +213,8 @@ def test_accepts_a_query_of_200_characters_after_stripping(migrated_db, make_cli
     assert response.json()["total"] == 0
 
 
-def test_results_are_in_corpus_order_without_scores_by_default(corpus, make_client):
+def test_results_are_in_corpus_order_without_scores_by_default_when_search_ranking_is_disabled(corpus, configure, make_client):
+    configure(search_ranking_enabled=False)
     body = make_client().get(URL, params={"q": "Zorbatown County"}).json()
 
     assert body["order"] == "corpus"
