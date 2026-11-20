@@ -76,7 +76,9 @@ def split_pages(text: str, page_index: Any) -> list[str]:
             or len(entry) < 2
             or not all(_is_int(offset) for offset in entry[:2])
         ):
-            raise InvalidSourceData(f"page index entry {leaf} is not [start, end, ...]: {entry!r}")
+            raise InvalidSourceData(
+                f"page index entry {leaf} is not [start, end, ...]: {entry!r}"
+            )
         start, end = entry[0], entry[1]
         if not previous_end <= start <= end <= len(text):
             raise InvalidSourceData(
@@ -109,13 +111,17 @@ def parse_page_numbers(page_numbers: Any | None, leaf_count: int) -> list[str | 
     for entry in entries:
         leaf = entry.get("leafNum") if isinstance(entry, dict) else None
         if not _is_int(leaf) or not 0 <= leaf < leaf_count or leaf in seen:
-            raise InvalidSourceData(f"page numbers entry has a bad or repeated leafNum: {entry!r}")
+            raise InvalidSourceData(
+                f"page numbers entry has a bad or repeated leafNum: {entry!r}"
+            )
         seen.add(leaf)
         number = entry.get("pageNumber")
         if number is None or number == "":
             continue
         if not isinstance(number, str) or len(number) > MAX_PAGE_NUMBER_LENGTH:
-            raise InvalidSourceData(f"leaf {leaf} has an unusable pageNumber: {number!r}")
+            raise InvalidSourceData(
+                f"leaf {leaf} has an unusable pageNumber: {number!r}"
+            )
         numbers[leaf] = number
     return numbers
 
@@ -148,7 +154,9 @@ def parse_date(value: str | None) -> date | None:
 def _bounded(metadata: dict[str, Any], key: str, max_length: int) -> str | None:
     value = _collapse_whitespace(_first_string(metadata.get(key)))
     if value and len(value) > max_length:
-        raise InvalidSourceData(f"metadata {key} is longer than {max_length} characters")
+        raise InvalidSourceData(
+            f"metadata {key} is longer than {max_length} characters"
+        )
     return value or None
 
 

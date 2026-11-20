@@ -14,7 +14,9 @@ from corpus.db import get_session
 router = APIRouter(prefix="/search", tags=["search"])
 
 
-def get_search_service(session: Annotated[AsyncSession, Depends(get_session)]) -> SearchService:
+def get_search_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> SearchService:
     return SearchService(
         SearchRepository(session), ranking=get_settings().search_ranking_enabled
     )

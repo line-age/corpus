@@ -18,8 +18,8 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date
-from time import sleep
 from http.client import HTTPException
+from time import sleep
 from typing import Any
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode
@@ -98,7 +98,11 @@ class ArchiveOrgClient:
         return metadata
 
     def list_collection(
-        self, collection: str, *, date_from: date | None = None, date_to: date | None = None
+        self,
+        collection: str,
+        *,
+        date_from: date | None = None,
+        date_to: date | None = None,
     ) -> list[str]:
         """Identifiers of the items in `collection`, oldest first, optionally only those
         dated from `date_from` to `date_to` inclusive."""
@@ -178,11 +182,14 @@ class ArchiveOrgClient:
         except (OSError, HTTPException) as e:
             # URLError (DNS, refused connections), timeouts and broken reads.
             reason = getattr(e, "reason", None) or e
-            raise _TransientFetchError(f"GET {url} failed: {type(e).__name__}: {reason}") from e
+            raise _TransientFetchError(
+                f"GET {url} failed: {type(e).__name__}: {reason}"
+            ) from e
 
 
 class _TransientFetchError(FetchError):
     """A failure worth retrying. Raised only inside the client."""
+
 
 def _search_results(body: Any, url: str) -> tuple[int, list[str]]:
     """The total hit count and this page's identifiers from an advanced search response."""

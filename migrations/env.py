@@ -18,9 +18,9 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+import corpus.models  # noqa: F401  (registers the models on Base.metadata)
 from corpus.config import get_settings
 from corpus.db import Base
-import corpus.models  # noqa: F401  (registers the models on Base.metadata)
 
 config = context.config
 

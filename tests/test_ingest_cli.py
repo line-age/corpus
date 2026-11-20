@@ -37,7 +37,8 @@ def identifiers(migrated_db) -> Iterator[list[str]]:
     try:
         with engine.begin() as conn:
             conn.execute(
-                text("DELETE FROM documents WHERE identifier = ANY(:ids)"), {"ids": values}
+                text("DELETE FROM documents WHERE identifier = ANY(:ids)"),
+                {"ids": values},
             )
     finally:
         engine.dispose()
@@ -47,7 +48,9 @@ def identifiers(migrated_db) -> Iterator[list[str]]:
 def client_class(monkeypatch, configure):
     """The client class the CLI uses, mocked. Settings get a fake base URL, to show the
     client is built from them."""
-    configure(archive_org_base_url="https://archive.example", ingest_http_timeout_seconds=9)
+    configure(
+        archive_org_base_url="https://archive.example", ingest_http_timeout_seconds=9
+    )
     mock_class = create_autospec(ArchiveOrgClient)
     mock_class.return_value = create_autospec(ArchiveOrgClient, instance=True)
     monkeypatch.setattr(cli, "ArchiveOrgClient", mock_class)
@@ -89,7 +92,10 @@ def test_ingests_every_item_and_exits_0(
     assert cli.main(identifiers) == 0
 
     client_class.assert_called_once_with("https://archive.example", 9)
-    assert page_counts(migrated_db, identifiers) == {identifiers[0]: 2, identifiers[1]: 2}
+    assert page_counts(migrated_db, identifiers) == {
+        identifiers[0]: 2,
+        identifiers[1]: 2,
+    }
     done = [line for line in log_lines(capsys) if line.get("document_id")]
     # Items run concurrently, so they may finish in any order.
     assert sorted((line["identifier"], line["pages"]) for line in done) == sorted(
@@ -147,7 +153,12 @@ def test_bad_arguments_exit_2_before_anything_runs(client_class, argv, capsys):
 def test_collection_items_are_listed_sampled_and_ingested(
     migrated_db, client, identifiers, capsys
 ):
-    client.list_collection.return_value = [identifiers[0], "skipped-a", "skipped-b", identifiers[1]]
+    client.list_collection.return_value = [
+        identifiers[0],
+        "skipped-a",
+        "skipped-b",
+        identifiers[1],
+    ]
     client.fetch.side_effect = make_source
 
     argv = ["--collection", "pub_journal", "--to", "1919-12-31", "--sample", "2"]
@@ -156,7 +167,9 @@ def test_collection_items_are_listed_sampled_and_ingested(
     client.list_collection.assert_called_once_with(
         "pub_journal", date_from=None, date_to=cli.date(1919, 12, 31)
     )
-    assert sorted(call.args[0] for call in client.fetch.call_args_list) == sorted(identifiers)
+    assert sorted(call.args[0] for call in client.fetch.call_args_list) == sorted(
+        identifiers
+    )
     (listed,) = [line for line in log_lines(capsys) if line.get("collection")]
     assert (listed["found"], listed["chosen"]) == (4, 2)
 
@@ -169,7 +182,10 @@ def test_skip_existing_ingests_only_new_items(migrated_db, client, identifiers):
     assert cli.main(["--skip-existing", *identifiers]) == 0
 
     client.fetch.assert_called_once_with(identifiers[1])
-    assert page_counts(migrated_db, identifiers) == {identifiers[0]: 2, identifiers[1]: 2}
+    assert page_counts(migrated_db, identifiers) == {
+        identifiers[0]: 2,
+        identifiers[1]: 2,
+    }
 
 
 def test_a_collection_that_cannot_be_listed_exits_1_but_items_still_run(

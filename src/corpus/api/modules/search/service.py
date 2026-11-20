@@ -93,7 +93,9 @@ def snippet(text: str, start: int, end: int) -> tuple[str, int, int]:
     return f"{lead}{before}{match}{after}{trail}", match_start, match_start + len(match)
 
 
-def bm25(occurrences: int, page_length: int, matching_pages: int, stats: CorpusStats) -> float:
+def bm25(
+    occurrences: int, page_length: int, matching_pages: int, stats: CorpusStats
+) -> float:
     """
     BM25 score of a page on which the phrase occurs `occurrences` times,
     when it occurs on `matching_pages` of the corpus's pages.
@@ -118,7 +120,9 @@ def bm25(occurrences: int, page_length: int, matching_pages: int, stats: CorpusS
     taken as 1.
     """
     idf = math.log(1 + (stats.pages - matching_pages + 0.5) / (matching_pages + 0.5))
-    relative_length = page_length / stats.average_page_length if stats.average_page_length else 1
+    relative_length = (
+        page_length / stats.average_page_length if stats.average_page_length else 1
+    )
     saturation = BM25_K1 * (1 - BM25_B + BM25_B * relative_length)
     return idf * occurrences * (BM25_K1 + 1) / (occurrences + saturation)
 
@@ -135,8 +139,8 @@ class SearchService:
     async def search(self, query: str, limit: int, offset: int) -> SearchResponse:
         """Every occurrence of `query`, with `limit` of them from `offset`: in corpus order,
         or by relevance when ranking is on.
-        
-        Logic: 
+
+        Logic:
         - Split search query into tokens
         -  SQL filters to pages containing every word
         - Then the regex matches the exact phrase.
@@ -149,9 +153,11 @@ class SearchService:
 
         matches: list[tuple[Page, list[re.Match[str]]]] = []
         if tokens:
-            phrase = phrase_pattern(tokens) # equivalent of what phraseto_ts_query in Postgres would do
+            phrase = phrase_pattern(
+                tokens
+            )  # equivalent of what phraseto_ts_query in Postgres would do
 
-            #Find all pages containing of the search tokens in the database 
+            # Find all pages containing of the search tokens in the database
             # Perform regex match for the search phrase
             # Add the page and matched phrases to the matches list
             for page in await self._repository.find_pages_containing(tokens):
@@ -165,7 +171,9 @@ class SearchService:
             occurrences = await self._ranked(matches)
         else:
             occurrences = [
-                (page, m.start(), m.end(), None) for page, found in matches for m in found
+                (page, m.start(), m.end(), None)
+                for page, found in matches
+                for m in found
             ]
         return SearchResponse(
             query=query,
@@ -173,10 +181,14 @@ class SearchService:
             total=len(occurrences),
             limit=limit,
             offset=offset,
-            results=[_hit(*occurrence) for occurrence in occurrences[offset : offset + limit]],
+            results=[
+                _hit(*occurrence) for occurrence in occurrences[offset : offset + limit]
+            ],
         )
 
-    async def _ranked(self, matches: list[tuple[Page, list[re.Match[str]]]]) -> list[Occurrence]:
+    async def _ranked(
+        self, matches: list[tuple[Page, list[re.Match[str]]]]
+    ) -> list[Occurrence]:
         """The occurrences, highest-scoring page first. The sort is stable, so pages with
         equal scores, and occurrences on the same page, stay in corpus order."""
         if not matches:

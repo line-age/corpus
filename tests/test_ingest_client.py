@@ -47,7 +47,9 @@ def sleeps(monkeypatch) -> list[float]:
     return slept
 
 
-def item_files(overrides: dict[str, bytes | Exception | list] | None = None) -> dict[str, bytes | Exception]:
+def item_files(
+    overrides: dict[str, bytes | Exception | list] | None = None,
+) -> dict[str, bytes | Exception]:
     """A complete item by URL. `overrides` replaces files by suffix, or "metadata"."""
     files: dict[str, bytes | Exception] = {
         "metadata": json.dumps({"metadata": {"title": "The Journal"}}).encode(),
@@ -104,14 +106,18 @@ def test_an_item_without_page_numbers_has_none(archive):
     "error",
     [
         HTTPError("url", 503, "Service Unavailable", None, None),
-        HTTPError("url", 404, "Not Found", None, None),  # only page numbers may be missing
+        HTTPError(
+            "url", 404, "Not Found", None, None
+        ),  # only page numbers may be missing
         URLError("Name or service not known"),
         TimeoutError("timed out"),
     ],
 )
 def test_download_failures_raise_fetch_error(monkeypatch, error):
     monkeypatch.setattr(
-        client_module, "urlopen", FakeArchive(item_files({"_hocr_searchtext.txt.gz": error}))
+        client_module,
+        "urlopen",
+        FakeArchive(item_files({"_hocr_searchtext.txt.gz": error})),
     )
 
     with pytest.raises(FetchError, match="_hocr_searchtext.txt.gz failed"):
@@ -120,7 +126,9 @@ def test_download_failures_raise_fetch_error(monkeypatch, error):
 
 def test_an_unknown_item_raises_fetch_error(monkeypatch):
     # archive.org answers an unknown identifier with 200 and an empty record.
-    monkeypatch.setattr(client_module, "urlopen", FakeArchive(item_files({"metadata": b"{}"})))
+    monkeypatch.setattr(
+        client_module, "urlopen", FakeArchive(item_files({"metadata": b"{}"}))
+    )
 
     with pytest.raises(FetchError, match="has no item"):
         ArchiveOrgClient(BASE, timeout=1).get_metadata(ID)
@@ -165,7 +173,9 @@ class FakeSearch:
         params = parse_qs(url.query)
         self.queries.append(params)
         rows, page = int(params["rows"][0]), int(params["page"][0])
-        docs = [{"identifier": i} for i in self.identifiers[(page - 1) * rows : page * rows]]
+        docs = [
+            {"identifier": i} for i in self.identifiers[(page - 1) * rows : page * rows]
+        ]
         body = {"response": {"numFound": self.total, "docs": docs}}
         return io.BytesIO(json.dumps(body).encode())
 
@@ -212,7 +222,9 @@ def test_list_collection_stops_when_a_page_is_empty(monkeypatch):
 
 
 def test_list_collection_rejects_an_unexpected_response(monkeypatch):
-    monkeypatch.setattr(client_module, "urlopen", lambda request, timeout: io.BytesIO(b"{}"))
+    monkeypatch.setattr(
+        client_module, "urlopen", lambda request, timeout: io.BytesIO(b"{}")
+    )
 
     with pytest.raises(FetchError, match="not an advanced search response"):
         ArchiveOrgClient(BASE, timeout=7).list_collection("c")
@@ -231,7 +243,8 @@ def http_error(code: int) -> HTTPError:
 
 
 @pytest.mark.parametrize(
-    "transient", [http_error(500), http_error(503), http_error(429), TimeoutError("timed out")]
+    "transient",
+    [http_error(500), http_error(503), http_error(429), TimeoutError("timed out")],
 )
 def test_transient_failures_are_retried(monkeypatch, sleeps, transient):
     text = gzip.compress(b"Cover\nPage one")
@@ -248,7 +261,9 @@ def test_transient_failures_are_retried(monkeypatch, sleeps, transient):
 def test_retries_give_up_after_the_last_delay(monkeypatch, sleeps):
     failures = [http_error(502)] * (len(client_module.RETRY_DELAYS) + 1)
     monkeypatch.setattr(
-        client_module, "urlopen", FakeArchive(item_files({"_hocr_searchtext.txt.gz": failures}))
+        client_module,
+        "urlopen",
+        FakeArchive(item_files({"_hocr_searchtext.txt.gz": failures})),
     )
 
     with pytest.raises(FetchError, match="HTTP 502"):

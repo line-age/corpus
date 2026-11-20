@@ -40,9 +40,18 @@ def corpus(migrated_db: Settings) -> Iterator[dict[str, Document]]:
                 text="Humble has staked a northwest Zorbatown\nCounty wildcat. "
                 "A second Zorbatown County test is planned.",
             ),
-            Page(leaf_number=2, text="zorbatown county news. Zorbatownville is elsewhere."),
-            Page(leaf_number=9, text="Zorb%town and Zorb_town and Zorb\\town are literal."),
-            Page(leaf_number=10, text="Zorbxtown, ZorbXYtown and Zorbtown are other words."),
+            Page(
+                leaf_number=2,
+                text="zorbatown county news. Zorbatownville is elsewhere.",
+            ),
+            Page(
+                leaf_number=9,
+                text="Zorb%town and Zorb_town and Zorb\\town are literal.",
+            ),
+            Page(
+                leaf_number=10,
+                text="Zorbxtown, ZorbXYtown and Zorbtown are other words.",
+            ),
         ],
     )
     early = Document(
@@ -50,7 +59,9 @@ def corpus(migrated_db: Settings) -> Iterator[dict[str, Document]]:
         title="Zorbatown Gazette",
         publication_date=date(1950, 1, 5),
         source_url=f"https://archive.org/details/test-search-early-{suffix}",
-        pages=[Page(leaf_number=4, page_number="2", text="Early Zorbatown County report.")],
+        pages=[
+            Page(leaf_number=4, page_number="2", text="Early Zorbatown County report.")
+        ],
     )
     engine = create_engine(migrated_db.database_url)
     try:
@@ -59,13 +70,17 @@ def corpus(migrated_db: Settings) -> Iterator[dict[str, Document]]:
             session.commit()
         yield {"late": late, "early": early}
         with Session(engine) as session:
-            session.execute(delete(Document).where(Document.id.in_([late.id, early.id])))
+            session.execute(
+                delete(Document).where(Document.id.in_([late.id, early.id]))
+            )
             session.commit()
     finally:
         engine.dispose()
 
 
-def test_returns_every_occurrence_with_citations_in_corpus_order_when_search_ranking_is_disabled(corpus, configure, make_client):
+def test_returns_every_occurrence_with_citations_in_corpus_order_when_search_ranking_is_disabled(
+    corpus, configure, make_client
+):
     configure(search_ranking_enabled=False)
     response = make_client().get(URL, params={"q": "Zorbatown County"})
 
@@ -74,7 +89,10 @@ def test_returns_every_occurrence_with_citations_in_corpus_order_when_search_ran
     assert body["query"] == "Zorbatown County"
     assert body["total"] == 4
     assert (body["limit"], body["offset"]) == (20, 0)
-    assert [(hit["document"]["identifier"], hit["page"]["leaf_number"]) for hit in body["results"]] == [
+    assert [
+        (hit["document"]["identifier"], hit["page"]["leaf_number"])
+        for hit in body["results"]
+    ] == [
         (corpus["early"].identifier, 4),
         (corpus["late"].identifier, 2),
         (corpus["late"].identifier, 7),
@@ -101,7 +119,9 @@ def test_returns_every_occurrence_with_citations_in_corpus_order_when_search_ran
     assert body["results"][1]["page"]["page_number"] is None
 
 
-def test_query_is_stripped_and_paged_when_search_ranking_is_disabled(corpus, configure, make_client):
+def test_query_is_stripped_and_paged_when_search_ranking_is_disabled(
+    corpus, configure, make_client
+):
     configure(search_ranking_enabled=False)
     response = make_client().get(
         URL, params={"q": "  Zorbatown\tCounty  ", "limit": 2, "offset": 1}
@@ -119,7 +139,9 @@ def test_matches_whole_words_only(corpus, make_client):
 
     # Four "Zorbatown"s across the pages; "Zorbatownville" is not one.
     assert body["total"] == 4
-    assert "Zorbatownville is elsewhere." not in [hit["snippet"] for hit in body["results"]]
+    assert "Zorbatownville is elsewhere." not in [
+        hit["snippet"] for hit in body["results"]
+    ]
 
 
 def test_no_matches(corpus, make_client):
@@ -163,7 +185,9 @@ def test_repository_escapes_like_wildcards(migrated_db, corpus, token, expected)
     assert [page.leaf_number for page in pages] == expected
 
 
-def test_repository_requires_every_token_and_orders_by_date_then_leaf(migrated_db, corpus):
+def test_repository_requires_every_token_and_orders_by_date_then_leaf(
+    migrated_db, corpus
+):
     async def find() -> list[tuple[str, int]]:
         engine = make_engine(migrated_db)
         try:
@@ -213,7 +237,9 @@ def test_accepts_a_query_of_200_characters_after_stripping(migrated_db, make_cli
     assert response.json()["total"] == 0
 
 
-def test_results_are_in_corpus_order_without_scores_by_default_when_search_ranking_is_disabled(corpus, configure, make_client):
+def test_results_are_in_corpus_order_without_scores_by_default_when_search_ranking_is_disabled(
+    corpus, configure, make_client
+):
     configure(search_ranking_enabled=False)
     body = make_client().get(URL, params={"q": "Zorbatown County"}).json()
 
@@ -234,11 +260,19 @@ def test_ranking_flag_orders_results_by_score(corpus, configure, make_client):
     assert scores == sorted(scores, reverse=True)
 
     def cited(hit):
-        return (hit["document"]["identifier"], hit["page"]["leaf_number"], hit["snippet"])
+        return (
+            hit["document"]["identifier"],
+            hit["page"]["leaf_number"],
+            hit["snippet"],
+        )
 
     # The same occurrences, reordered; both on leaf 7 share its score.
-    assert sorted(map(cited, body["results"])) == sorted(map(cited, corpus_order["results"]))
-    leaf_7 = {hit["score"] for hit in body["results"] if hit["page"]["leaf_number"] == 7}
+    assert sorted(map(cited, body["results"])) == sorted(
+        map(cited, corpus_order["results"])
+    )
+    leaf_7 = {
+        hit["score"] for hit in body["results"] if hit["page"]["leaf_number"] == 7
+    }
     assert len(leaf_7) == 1
 
 

@@ -54,7 +54,9 @@ def identifier(db: Engine) -> Iterator[str]:
     value = f"test-ingest-{uuid4().hex}"
     yield value
     with db.begin() as conn:
-        conn.execute(text("DELETE FROM documents WHERE identifier = :id"), {"id": value})
+        conn.execute(
+            text("DELETE FROM documents WHERE identifier = :id"), {"id": value}
+        )
 
 
 @pytest.fixture
@@ -66,7 +68,9 @@ def ingest(settings: Settings, client, identifier: str) -> IngestResult:
     async def run() -> IngestResult:
         engine = make_engine(settings)
         try:
-            return await IngestService(client, make_sessionmaker(engine)).ingest(identifier)
+            return await IngestService(client, make_sessionmaker(engine)).ingest(
+                identifier
+            )
         finally:
             await engine.dispose()
 
@@ -76,9 +80,14 @@ def ingest(settings: Settings, client, identifier: str) -> IngestResult:
 def stored(db: Engine, identifier: str) -> tuple[dict | None, list[tuple]]:
     """The document row (as a dict) and its pages as (leaf, page number, text)."""
     with db.connect() as conn:
-        document = conn.execute(
-            text("SELECT * FROM documents WHERE identifier = :id"), {"id": identifier}
-        ).mappings().one_or_none()
+        document = (
+            conn.execute(
+                text("SELECT * FROM documents WHERE identifier = :id"),
+                {"id": identifier},
+            )
+            .mappings()
+            .one_or_none()
+        )
         pages = conn.execute(
             text(
                 "SELECT leaf_number, page_number, text FROM pages"
@@ -90,9 +99,14 @@ def stored(db: Engine, identifier: str) -> tuple[dict | None, list[tuple]]:
     return (dict(document) if document else None), [tuple(page) for page in pages]
 
 
-def test_ingest_stores_the_document_and_one_row_per_page(migrated_db, db, client, identifier):
+def test_ingest_stores_the_document_and_one_row_per_page(
+    migrated_db, db, client, identifier
+):
     client.fetch.return_value = make_source(
-        identifier, [("Cover", ""), ("Page one", "1"), ("Page two", "2")], volume="50", issue="5"
+        identifier,
+        [("Cover", ""), ("Page one", "1"), ("Page two", "2")],
+        volume="50",
+        issue="5",
     )
 
     result = ingest(migrated_db, client, identifier)
@@ -108,7 +122,9 @@ def test_ingest_stores_the_document_and_one_row_per_page(migrated_db, db, client
     assert pages == [(0, None, "Cover"), (1, "1", "Page one"), (2, "2", "Page two")]
 
 
-def test_reingesting_replaces_metadata_and_pages_in_place(migrated_db, db, client, identifier):
+def test_reingesting_replaces_metadata_and_pages_in_place(
+    migrated_db, db, client, identifier
+):
     client.fetch.return_value = make_source(
         identifier, [("Old cover", ""), ("Old one", "1"), ("Old two", "2")], volume="50"
     )
@@ -116,7 +132,10 @@ def test_reingesting_replaces_metadata_and_pages_in_place(migrated_db, db, clien
     first_document, _ = stored(db, identifier)
 
     client.fetch.return_value = make_source(
-        identifier, [("New cover", ""), ("New one", "1")], title="New title", date="1951"
+        identifier,
+        [("New cover", ""), ("New one", "1")],
+        title="New title",
+        date="1951",
     )
     second = ingest(migrated_db, client, identifier)
 
@@ -130,7 +149,9 @@ def test_reingesting_replaces_metadata_and_pages_in_place(migrated_db, db, clien
 
 
 def test_reingesting_the_same_item_is_idempotent(migrated_db, db, client, identifier):
-    client.fetch.return_value = make_source(identifier, [("Cover", ""), ("Page one", "1")])
+    client.fetch.return_value = make_source(
+        identifier, [("Cover", ""), ("Page one", "1")]
+    )
 
     ingest(migrated_db, client, identifier)
     first = stored(db, identifier)
@@ -143,7 +164,8 @@ def test_reingesting_the_same_item_is_idempotent(migrated_db, db, client, identi
     assert first[1] == second[1]
     with db.connect() as conn:
         count = conn.scalar(
-            text("SELECT count(*) FROM documents WHERE identifier = :id"), {"id": identifier}
+            text("SELECT count(*) FROM documents WHERE identifier = :id"),
+            {"id": identifier},
         )
     assert count == 1
 
@@ -151,7 +173,9 @@ def test_reingesting_the_same_item_is_idempotent(migrated_db, db, client, identi
 def test_items_are_stored_separately(migrated_db, db, client, identifier):
     other = f"{identifier}-other"
     try:
-        client.fetch.side_effect = lambda id_: make_source(id_, [(f"Text of {id_}", "")])
+        client.fetch.side_effect = lambda id_: make_source(
+            id_, [(f"Text of {id_}", "")]
+        )
         ingest(migrated_db, client, identifier)
         ingest(migrated_db, client, other)
 
@@ -159,7 +183,9 @@ def test_items_are_stored_separately(migrated_db, db, client, identifier):
         assert stored(db, other)[1] == [(0, None, f"Text of {other}")]
     finally:
         with db.begin() as conn:
-            conn.execute(text("DELETE FROM documents WHERE identifier = :id"), {"id": other})
+            conn.execute(
+                text("DELETE FROM documents WHERE identifier = :id"), {"id": other}
+            )
 
 
 def test_a_failed_download_writes_nothing(migrated_db, db, client, identifier):
@@ -171,13 +197,19 @@ def test_a_failed_download_writes_nothing(migrated_db, db, client, identifier):
     assert stored(db, identifier) == (None, [])
 
 
-def test_invalid_data_leaves_the_earlier_copy_untouched(migrated_db, db, client, identifier):
-    client.fetch.return_value = make_source(identifier, [("Cover", ""), ("Page one", "1")])
+def test_invalid_data_leaves_the_earlier_copy_untouched(
+    migrated_db, db, client, identifier
+):
+    client.fetch.return_value = make_source(
+        identifier, [("Cover", ""), ("Page one", "1")]
+    )
     ingest(migrated_db, client, identifier)
     before = stored(db, identifier)
 
     broken = make_source(identifier, [("New cover", "")], title="New title")
-    client.fetch.return_value = SourceItem(**(vars(broken) | {"page_index": [[0, 999]]}))
+    client.fetch.return_value = SourceItem(
+        **(vars(broken) | {"page_index": [[0, 999]]})
+    )
     with pytest.raises(InvalidSourceData):
         ingest(migrated_db, client, identifier)
 
@@ -187,7 +219,9 @@ def test_invalid_data_leaves_the_earlier_copy_untouched(migrated_db, db, client,
 def test_a_database_failure_rolls_back_the_whole_item(
     migrated_db, db, client, identifier, monkeypatch
 ):
-    client.fetch.return_value = make_source(identifier, [("Cover", ""), ("Page one", "1")])
+    client.fetch.return_value = make_source(
+        identifier, [("Cover", ""), ("Page one", "1")]
+    )
     ingest(migrated_db, client, identifier)
     before = stored(db, identifier)
 
@@ -199,7 +233,9 @@ def test_a_database_failure_rolls_back_the_whole_item(
         raise RuntimeError("connection lost")
 
     monkeypatch.setattr(IngestRepository, "replace_document", replace_then_fail)
-    client.fetch.return_value = make_source(identifier, [("New cover", "")], title="New title")
+    client.fetch.return_value = make_source(
+        identifier, [("New cover", "")], title="New title"
+    )
     with pytest.raises(RuntimeError):
         ingest(migrated_db, client, identifier)
 

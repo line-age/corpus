@@ -87,7 +87,9 @@ def test_without_a_page_numbers_file_no_page_has_a_number():
 
 
 def test_page_numbers_are_matched_by_leaf_number_not_position():
-    numbers = {"pages": [{"leafNum": 1, "pageNumber": "ii"}, {"leafNum": 0, "pageNumber": "i"}]}
+    numbers = {
+        "pages": [{"leafNum": 1, "pageNumber": "ii"}, {"leafNum": 0, "pageNumber": "i"}]
+    }
 
     assert parse_page_numbers(numbers, 2) == ["i", "ii"]
 
@@ -102,8 +104,14 @@ def test_page_numbers_count_must_match_the_page_index():
 @pytest.mark.parametrize(
     "pages",
     [
-        [{"leafNum": 0, "pageNumber": "1"}, {"leafNum": 0, "pageNumber": "2"}],  # repeated
-        [{"leafNum": 0, "pageNumber": "1"}, {"leafNum": 2, "pageNumber": "2"}],  # out of range
+        [
+            {"leafNum": 0, "pageNumber": "1"},
+            {"leafNum": 0, "pageNumber": "2"},
+        ],  # repeated
+        [
+            {"leafNum": 0, "pageNumber": "1"},
+            {"leafNum": 2, "pageNumber": "2"},
+        ],  # out of range
         [{"leafNum": 0, "pageNumber": "1"}, {"pageNumber": "2"}],  # missing
         [{"leafNum": 0, "pageNumber": "1"}, "2"],  # not an object
     ],
@@ -140,7 +148,9 @@ def test_document_fields_come_from_the_metadata():
 
 
 def test_repeated_metadata_fields_use_the_first_value():
-    document = parse_document(source(metadata={"title": ["First", "Second"], "volume": ["7"]}))
+    document = parse_document(
+        source(metadata={"title": ["First", "Second"], "volume": ["7"]})
+    )
 
     assert document.title == "First"
     assert document.volume == "7"

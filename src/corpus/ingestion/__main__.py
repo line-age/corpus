@@ -127,7 +127,9 @@ def _positive(value: str) -> int:
 
 
 async def _run(args: argparse.Namespace, settings: Settings) -> int:
-    client = ArchiveOrgClient(settings.archive_org_base_url, settings.ingest_http_timeout_seconds)
+    client = ArchiveOrgClient(
+        settings.archive_org_base_url, settings.ingest_http_timeout_seconds
+    )
     identifiers = list(args.identifiers)
     listing_failed = False
     for collection in args.collections:
@@ -150,7 +152,11 @@ async def _run(args: argparse.Namespace, settings: Settings) -> int:
             collection,
             len(found),
             len(chosen),
-            extra={"collection": collection, "found": len(found), "chosen": len(chosen)},
+            extra={
+                "collection": collection,
+                "found": len(found),
+                "chosen": len(chosen),
+            },
         )
         identifiers.extend(chosen)
     identifiers = list(dict.fromkeys(identifiers))  # drop repeats, keep order
@@ -181,7 +187,9 @@ async def _run(args: argparse.Namespace, settings: Settings) -> int:
     return 1 if failed or listing_failed else 0
 
 
-async def _ingest_all(service: IngestService, identifiers: list[str], concurrency: int) -> int:
+async def _ingest_all(
+    service: IngestService, identifiers: list[str], concurrency: int
+) -> int:
     """Ingest every item, `concurrency` at a time. Returns how many failed."""
     limit = asyncio.Semaphore(concurrency)
 
@@ -204,8 +212,10 @@ async def _ingest_one(service: IngestService, identifier: str) -> bool:
             "ingest of %s failed: %s", identifier, e, extra={"identifier": identifier}
         )
         return False
-    except Exception:
-        logger.exception("ingest of %s failed", identifier, extra={"identifier": identifier})
+    except Exception:  # noqa: BLE001
+        logger.exception(
+            "ingest of %s failed", identifier, extra={"identifier": identifier}
+        )
         return False
     logger.info(
         "ingested %s: %d pages, %d with printed page numbers",

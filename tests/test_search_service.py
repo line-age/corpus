@@ -10,6 +10,7 @@ from corpus.api.modules.search.repository import CorpusStats, SearchRepository
 from corpus.api.modules.search.service import SNIPPET_CONTEXT, SearchService, bm25
 from corpus.models import Document, Page
 
+
 def make_page(text: str, leaf_number: int = 0, page_number: str | None = None) -> Page:
     document = Document(
         id=1,
@@ -20,7 +21,9 @@ def make_page(text: str, leaf_number: int = 0, page_number: str | None = None) -
         issue="5",
         source_url="https://archive.org/details/oilgasjournal-test",
     )
-    return Page(leaf_number=leaf_number, page_number=page_number, text=text, document=document)
+    return Page(
+        leaf_number=leaf_number, page_number=page_number, text=text, document=document
+    )
 
 
 @pytest.fixture
@@ -32,7 +35,9 @@ def repository():
     return mock
 
 
-def search(repository, query: str, limit: int = 20, offset: int = 0, *, ranking: bool = False):
+def search(
+    repository, query: str, limit: int = 20, offset: int = 0, *, ranking: bool = False
+):
     service = SearchService(repository, ranking=ranking)
     return asyncio.run(service.search(query, limit=limit, offset=offset))
 
@@ -60,7 +65,9 @@ def test_a_candidate_page_without_the_phrase_yields_nothing(repository):
 
 def test_every_occurrence_on_a_page_is_a_result(repository):
     repository.find_pages_containing.return_value = [
-        make_page("Martin County well. Another Martin County test. Third in Martin County.")
+        make_page(
+            "Martin County well. Another Martin County test. Third in Martin County."
+        )
     ]
 
     result = search(repository, "Martin County")
@@ -85,7 +92,10 @@ def test_phrase_matches_across_a_line_break(repository):
 
     assert result.total == 1
     hit = result.results[0]
-    assert hit.snippet == "Humble Oil has staked location for a northwest Martin County wildcat."
+    assert (
+        hit.snippet
+        == "Humble Oil has staked location for a northwest Martin County wildcat."
+    )
     assert matched(hit) == "Martin County"
 
 
@@ -110,7 +120,9 @@ def test_matching_ignores_case_and_keeps_the_original_text(repository):
 
 
 def test_query_regex_characters_are_literal(repository):
-    repository.find_pages_containing.return_value = [make_page("Pay is 3.5 ft. Pay is 3x5 ft.")]
+    repository.find_pages_containing.return_value = [
+        make_page("Pay is 3.5 ft. Pay is 3x5 ft.")
+    ]
 
     result = search(repository, "3.5 ft")
 
@@ -133,7 +145,9 @@ def test_snippet_is_the_statement_containing_the_match(repository):
 
 def test_a_blank_line_ends_a_statement(repository):
     repository.find_pages_containing.return_value = [
-        make_page("HEADLINE ABOUT DRILLING\n\nMartin County wildcat spudded\n\nNext item")
+        make_page(
+            "HEADLINE ABOUT DRILLING\n\nMartin County wildcat spudded\n\nNext item"
+        )
     ]
 
     hit = search(repository, "Martin County").results[0]
@@ -209,7 +223,9 @@ def test_offset_and_limit_page_through_all_occurrences(repository):
 
 
 def test_offset_past_the_end_returns_the_total_and_no_results(repository):
-    repository.find_pages_containing.return_value = [make_page("Martin one. Martin two.")]
+    repository.find_pages_containing.return_value = [
+        make_page("Martin one. Martin two.")
+    ]
 
     result = search(repository, "Martin", offset=5)
 

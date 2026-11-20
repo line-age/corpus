@@ -56,7 +56,9 @@ class Page(Base):
 
     __tablename__ = "pages"
     __table_args__ = (
-        UniqueConstraint("document_id", "leaf_number", name="uq_pages_document_id_leaf_number"),
+        UniqueConstraint(
+            "document_id", "leaf_number", name="uq_pages_document_id_leaf_number"
+        ),
         # Trigram index so case-insensitive substring filters (ILIKE '%term%') can use an
         # index instead of scanning every page. Needs the pg_trgm extension.
         Index(

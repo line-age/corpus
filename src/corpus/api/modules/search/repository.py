@@ -46,7 +46,10 @@ class SearchRepository:
             .join(Page.document)
             .options(contains_eager(Page.document))
             .where(
-                *(Page.text.ilike(_contains_pattern(token), escape=LIKE_ESCAPE) for token in tokens)
+                *(
+                    Page.text.ilike(_contains_pattern(token), escape=LIKE_ESCAPE)
+                    for token in tokens
+                )
             )
             .order_by(Document.publication_date, Document.id, Page.leaf_number)
         )
@@ -54,6 +57,8 @@ class SearchRepository:
 
     async def get_corpus_stats(self) -> CorpusStats:
         """How many pages the corpus has and their average length."""
-        statement = select(func.count(Page.id), func.coalesce(func.avg(func.length(Page.text)), 0))
+        statement = select(
+            func.count(Page.id), func.coalesce(func.avg(func.length(Page.text)), 0)
+        )
         pages, average = (await self._session.execute(statement)).one()
         return CorpusStats(pages=pages, average_page_length=float(average))

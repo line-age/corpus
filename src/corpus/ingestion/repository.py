@@ -29,7 +29,11 @@ class IngestRepository:
         upsert = upsert.on_conflict_do_update(
             index_elements=[Document.identifier],
             set_={
-                **{name: upsert.excluded[name] for name in fields if name != "identifier"},
+                **{
+                    name: upsert.excluded[name]
+                    for name in fields
+                    if name != "identifier"
+                },
                 "ingested_at": func.now(),
             },
         ).returning(Document.id)
@@ -47,5 +51,7 @@ class IngestRepository:
         """Which of `identifiers` are already stored."""
         if not identifiers:
             return set()
-        statement = select(Document.identifier).where(Document.identifier.in_(identifiers))
+        statement = select(Document.identifier).where(
+            Document.identifier.in_(identifiers)
+        )
         return set((await self._session.scalars(statement)).all())
