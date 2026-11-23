@@ -1,0 +1,12 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "91333862ccec1224565b60a671bea5aa8b99ce47",
+  "prompts": {},
+  "humans": {
+    "h_677ed464d6b3fb": {
+      "author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  }
+}
