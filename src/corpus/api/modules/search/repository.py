@@ -51,6 +51,14 @@ class SearchRepository:
         """The passages containing the phrase, highest BM25 score first, `limit` of them
         from `offset`. Ties are broken by passage id, so paging is stable."""
         score = func.pdb.score(passage.c.id).label("score")
+
+        # Alternative implementation idea:
+        # Rewrite this query to use top-K subquery to narrow down the
+        # the result set with the `where` filter before joining on other tables.
+        # This would ensure that postgres does join every matching row before applying
+        # the `limit` on the number of rows to return. Becomes useful when the dataset is
+        # larger.
+        # (Explore caveats and justify upside before implementing.)
         statement = (
             select(
                 passage.c.identifier,
