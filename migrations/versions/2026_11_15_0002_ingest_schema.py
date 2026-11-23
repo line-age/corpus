@@ -1,6 +1,7 @@
 """Ingest schema: publication, item, stage_state, page, passage.
 
 The BM25 index needs pg_search, so the ingest `index` stage creates it, not this revision.
+Revision 0004 now creates it too.
 
 Revision ID: 0002
 Revises: 0001
