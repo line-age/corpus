@@ -50,18 +50,25 @@ class PageCitation(BaseModel):
     """Link to this page of the scan."""
 
 
+class Snippet(BaseModel):
+    """One occurrence of the query in a passage, with the statement that contains it."""
+
+    text: str
+    """The statement containing the match, whitespace collapsed; "..." marks a cut."""
+    match_start: int
+    """Offset in `text` where the matched text starts."""
+    match_end: int
+    """Offset in `text` just past the matched text."""
+
+
 class SearchHit(BaseModel):
-    """One passage containing the query, with the statement in it that contains the query."""
+    """One passage containing the query, with a snippet for each occurrence of it."""
 
     document: DocumentCitation
     page: PageCitation
-    snippet: str
-    """The statement containing the first match in the passage, whitespace collapsed;
-    "..." marks a cut."""
-    match_start: int
-    """Offset in `snippet` where the matched text starts."""
-    match_end: int
-    """Offset in `snippet` just past the matched text."""
+    snippets: list[Snippet]
+    """One per occurrence of the query in the passage, in the order they occur. Two
+    occurrences in one statement give two snippets with the same `text`."""
     score: float
     """Relevance of the passage to the query (BM25); higher is more relevant. Results are
     ordered by it, highest first."""

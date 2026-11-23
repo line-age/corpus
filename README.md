@@ -98,8 +98,8 @@ end-to-end test; without it, that test is skipped.
 
 `GET /api/v1/search?q=<words>` returns the passages of OCR text that contain a word or
 phrase, such as a place name, most relevant first, with a citation for each: the document,
-the page (printed number, scan position and a link to that page of the scan) and the
-statement that contains the phrase.
+the page (printed number, scan position and a link to that page of the scan) and, for
+every occurrence of the phrase in the passage, the statement that contains it.
 
 - `q` is required, 2 to 200 characters. `limit` (1 to 100, default 20) and `offset`
   (default 0) page through the results; `total` counts every matching passage.
@@ -110,9 +110,11 @@ statement that contains the phrase.
   often, passages whose words are rarer across the corpus, and shorter passages come first.
 - One result per passage. A passage is a window of about 250 words of a page (see
   [docs/ingestion-plan.md](docs/ingestion-plan.md)), and passages overlap by 50 words.
-- `snippet` is the statement around the first match in the passage, from its normalised
-  text (whitespace collapsed, words hyphenated across a line break rejoined).
-  `match_start` and `match_end` locate the match within `snippet`, for highlighting.
+- `snippets` has one entry per occurrence of the phrase in the passage, in order. Each
+  `text` is the statement around that occurrence, from the passage's normalised text
+  (whitespace collapsed, words hyphenated across a line break rejoined), and
+  `match_start` and `match_end` locate the match within `text`, for highlighting. Two
+  occurrences in one statement give two entries with the same `text`.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -124,14 +126,18 @@ statement that contains the phrase.
   "results": [{
     "document": {"identifier": "sim_pipeline-gas-journal_1926-10-30_125_22", "title": "American Gas Journal 1926-10-30: Vol 125 Iss 22", "publication_date": "1926-10-30", "volume": "125", "issue": "22", "source_url": "https://archive.org/details/sim_pipeline-gas-journal_1926-10-30_125_22"},
     "page": {"leaf_number": 19, "page_number": "550", "url": "https://archive.org/details/sim_pipeline-gas-journal_1926-10-30_125_22/page/n19"},
-    "snippet": "The plant that is employed for the removal of gasoline from natural gas by absorption in charcoal consists of a number of absorption cylinders of horizontal type, which contain the activated charcoal and through it the casing-head gas is led.",
-    "match_start": 60, "match_end": 71, "score": 4.5199
+    "snippets": [
+      {"text": "The plant that is employed for the removal of gasoline from natural gas by absorption in charcoal consists of a number of absorption cylinders of horizontal type, which contain the activated charcoal and through it the casing-head gas is led.", "match_start": 60, "match_end": 71},
+      {"text": "Furthermore, there will be at least a 25 per cent greater extraction of gasoline from dry natural gas in case of the charcoal process than in the oil process.", "match_start": 90, "match_end": 101},
+      {"text": "The fourth and last process for removing gasoline from natural gas is an absorption process in which the casing-head gas constituents are directly absorbed in gasoline to give a properly blended mixture.", "match_start": 55, "match_end": 66}
+    ],
+    "score": 4.5199
   }]
 }
 ```
 
-Known limits: a phrase that falls in the overlap between two passages is returned once for
-each; abbreviations such as "Co." end a snippet early; and there is no stemming, so `well`
+Known limits: a phrase that falls in the overlap between two passages is cited in both
+passages' results; abbreviations such as "Co." end a snippet early; and there is no stemming, so `well`
 does not match `wells`.
 
 ## Service Status Endpoints

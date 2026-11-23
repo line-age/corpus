@@ -4,39 +4,38 @@ pg_search does the matching and ranking in the database (see the repository). It
 the passages that contain the query as a phrase and ranks them by BM25: a passage scores
 higher the more often the query's words occur in it, with diminishing returns, the rarer
 those words are across the corpus, and the shorter the passage is. This module only turns
-each passage into a citation with a snippet.
+each passage into a citation with a snippet for each occurrence of the phrase.
 
 - One result per passage. Passages overlap by 50 words, so a phrase in an overlap can be
   cited twice, once from each passage.
-- The snippet is cut from the passage's normalised text (whitespace collapsed, words
+- Snippets are cut from the passage's normalised text (whitespace collapsed, words
   hyphenated across a line break rejoined), which is the text the index matched.
+- Where the phrase is comes from pg_search too: the query's words as the index splits
+  them, and where each of them occurs in the passage. This module only picks out the
+  places those words occur together, in order.
 - A statement ends at ".", "!" or "?" followed by whitespace. Abbreviations such as "Co."
   end it early; SNIPPET_CONTEXT keeps long ones bounded.
 """
 
 import re
 from collections.abc import Sequence
+from itertools import pairwise
 
 from corpus.api.modules.search.dto import (
     DocumentCitation,
     PageCitation,
     SearchHit,
     SearchResponse,
+    Snippet,
 )
-from corpus.api.modules.search.repository import PassageMatch, SearchRepository
+from corpus.api.modules.search.repository import PassageMatch, SearchRepository, Span
 from corpus.lib.logger import logger
 
 SNIPPET_CONTEXT = 200
 """Most characters of context kept on each side of a match."""
 ELLIPSIS = "..."
 
-# A word as pg_search's default tokenizer (unicode_words, Unicode word boundaries) sees
-# it: letters, digits and underscores, kept together across an apostrophe or full stop
-# between letters or digits ("O'Brien", "3.5"), a colon between letters, and a comma or
-# semicolon between digits ("1,000"). Hyphens and other punctuation separate words.
-_TOKEN = re.compile(
-    r"\w+(?:(?:(?<=[^\W_])['’.](?=[^\W_])|(?<=[^\W\d_]):(?=[^\W\d_])|(?<=\d)[,;](?=\d))\w+)*"
-)
+_WORD_CHARACTER = re.compile(r"\w")
 
 _CLOSERS = re.escape("\"')]’”")
 # The end of a statement before a match, through the whitespace that follows it.
@@ -46,23 +45,39 @@ _STATEMENT_END = re.compile(rf"(?P<stop>[.!?][{_CLOSERS}]*)(?=\s|\Z)|\n[ \t]*\n"
 _WHITESPACE = re.compile(r"\s+")
 
 
-def tokens(text: str) -> list[str]:
-    """The words of `text`, lower-cased, as the search index splits them."""
-    return [match.group().lower() for match in _TOKEN.finditer(text)]
+def find_phrases(
+    text: str, word_spans: Sequence[Span], terms: Sequence[str]
+) -> list[Span]:
+    """Every place `terms` occur in `text` one after another, as (start, end) offsets into
+    `text`, in order.
 
-
-def find_phrase(text: str, phrase: Sequence[str]) -> tuple[int, int] | None:
-    """Where the words of `phrase` first occur in `text` one after another, as (start, end)
-    offsets into `text`, or None. Whatever separates the words in `text` is ignored, as
-    pg_search ignores it."""
-    if not phrase:
-        return None
-    words = list(_TOKEN.finditer(text))
-    size = len(phrase)
-    for i in range(len(words) - size + 1):
-        if all(words[i + j].group().lower() == phrase[j] for j in range(size)):
-            return words[i].start(), words[i + size - 1].end()
-    return None
+    `word_spans` are where pg_search found the query's words in `text`, in order. It marks
+    every occurrence of every word, so an occurrence of the phrase is a run of spans that
+    spells `terms` in order with no other word between them. Punctuation between them is
+    ignored, as pg_search ignores it. Occurrences don't overlap: after one is found, the
+    search resumes past it.
+    """
+    size = len(terms)
+    found: list[Span] = []
+    if not size:
+        return found
+    i = 0
+    while i <= len(word_spans) - size:
+        run = word_spans[i : i + size]
+        spells_terms = all(
+            text[start:end].lower() == term
+            for (start, end), term in zip(run, terms, strict=True)
+        )
+        adjacent = not any(
+            _WORD_CHARACTER.search(text, previous_end, next_start)
+            for (_, previous_end), (next_start, _) in pairwise(run)
+        )
+        if spells_terms and adjacent:
+            found.append((run[0][0], run[-1][1]))
+            i += size
+        else:
+            i += 1
+    return found
 
 
 def snippet(text: str, start: int, end: int) -> tuple[str, int, int]:
@@ -113,12 +128,13 @@ class SearchService:
 
     async def search(self, query: str, limit: int, offset: int) -> SearchResponse:
         """The passages containing `query` as a phrase, most relevant first, `limit` of them
-        from `offset`, each cited with a snippet around the phrase."""
-        phrase = tokens(query)
+        from `offset`, each cited with a snippet around every occurrence of the phrase."""
+        terms = await self._repository.query_terms(query)
         total = 0
         matches: list[PassageMatch] = []
-        # A query with no words (only punctuation) can match nothing.
-        if phrase:
+        # A query with no words (only punctuation) can match nothing,
+        # so we skip the count and the search.
+        if terms:
             total = await self._repository.count_passages(query)
             if offset < total:
                 matches = await self._repository.find_passages(query, limit, offset)
@@ -127,20 +143,25 @@ class SearchService:
             total=total,
             limit=limit,
             offset=offset,
-            results=[self._hit(match, phrase) for match in matches],
+            results=[self._hit(match, terms) for match in matches],
         )
 
-    def _hit(self, match: PassageMatch, phrase: Sequence[str]) -> SearchHit:
-        found = find_phrase(match.search_text, phrase)
-        if found is None:
-            # The index matched the passage, but our copy of its tokenizer splits the text
-            # differently. Cite the start of the passage rather than drop the result.
+    def _hit(self, match: PassageMatch, terms: Sequence[str]) -> SearchHit:
+        found = find_phrases(match.search_text, match.word_spans, terms)
+        if not found:
+            # The index matched the passage, but its word positions don't spell the phrase.
+            # Cite the start of the passage rather than drop the result.
             logger.warning(
                 "search match not located in passage",
                 extra={"identifier": match.identifier, "leaf": match.leaf},
             )
-            found = (0, 0)
-        text, match_start, match_end = snippet(match.search_text, *found)
+            found = [(0, 0)]
+        snippets = [
+            Snippet(text=text, match_start=match_start, match_end=match_end)
+            for text, match_start, match_end in (
+                snippet(match.search_text, start, end) for start, end in found
+            )
+        ]
         source_url = f"{self._archive_org_base_url}/details/{match.identifier}"
         return SearchHit(
             document=DocumentCitation(
@@ -156,8 +177,6 @@ class SearchService:
                 page_number=match.printed_page,
                 url=f"{source_url}/page/n{match.leaf}",
             ),
-            snippet=text,
-            match_start=match_start,
-            match_end=match_end,
+            snippets=snippets,
             score=round(match.score, 4),
         )

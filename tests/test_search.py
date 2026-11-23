@@ -29,6 +29,7 @@ ONE = "Zorbatown County wildcat. Another field test. Another oil well."
 # One occurrence in a much longer passage.
 LONG = "Zorbatown County report. " + "Filler words about other things. " * 60
 EARLY = "Early Zorbatown County report."
+QUORVALE = "Basin news \u2014 \u00dcber caf\u00e9. The Quorvale Basin lies here."
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,8 @@ def corpus(migrated_db: Settings) -> Iterator[Corpus]:
             ["Zorbatownville is elsewhere. Zorb_town and Zorb%town are odd."],
         ),
         (late, 3, None, ["County of Zorbatown."]),
+        # Multi-byte characters before the phrase, and one of its words alone.
+        (late, 11, None, [QUORVALE]),
         (early, 4, "2", [EARLY]),
     ]
     engine = create_engine(migrated_db.database_url)
@@ -141,8 +144,9 @@ def leaves(body: dict, corpus: Corpus) -> list[tuple[str, int]]:
     ]
 
 
-def matched(hit: dict) -> str:
-    return hit["snippet"][hit["match_start"] : hit["match_end"]]
+def matched(hit: dict) -> list[str]:
+    """The matched text of each of a result's snippets."""
+    return [s["text"][s["match_start"] : s["match_end"]] for s in hit["snippets"]]
 
 
 def test_returns_matching_passages_ranked_by_score(corpus, make_client):
@@ -163,7 +167,7 @@ def test_returns_matching_passages_ranked_by_score(corpus, make_client):
     assert (
         found.index(("late", 7)) < found.index(("late", 8)) < found.index(("late", 9))
     )
-    assert all(matched(hit) == "Zorbatown County" for hit in body["results"])
+    assert all(set(matched(hit)) == {"Zorbatown County"} for hit in body["results"])
 
 
 def test_each_result_is_cited(corpus, configure, make_client):
@@ -185,7 +189,12 @@ def test_each_result_is_cited(corpus, configure, make_client):
         "page_number": "5",
         "url": f"https://archive.example/details/{corpus.late}/page/n7",
     }
-    assert hit["snippet"] == "Zorbatown County wildcat."
+    # A snippet for each of the passage's three occurrences, in order.
+    assert [s["text"] for s in hit["snippets"]] == [
+        "Zorbatown County wildcat.",
+        "Zorbatown County test.",
+        "Zorbatown County well.",
+    ]
     [early] = [
         h for h in body["results"] if h["document"]["identifier"] == corpus.early
     ]
@@ -219,7 +228,7 @@ def test_matches_whole_words_only(corpus, make_client):
         ("late", 8),
         ("late", 9),
     ]
-    assert all(matched(hit) == "Zorbatown" for hit in body["results"])
+    assert all(set(matched(hit)) == {"Zorbatown"} for hit in body["results"])
 
 
 def test_matches_the_words_in_order(corpus, make_client):
@@ -235,14 +244,24 @@ def test_punctuation_between_words_is_ignored_as_the_index_ignores_it(
     body = make_client().get(URL, params={"q": "Zorb town"}).json()
 
     assert leaves(body, corpus) == [("late", 2)]
-    assert matched(body["results"][0]) == "Zorb%town"
+    assert matched(body["results"][0]) == ["Zorb%town"]
 
 
 def test_an_underscore_joins_a_word(corpus, make_client):
     body = make_client().get(URL, params={"q": "Zorb_town"}).json()
 
     assert leaves(body, corpus) == [("late", 2)]
-    assert matched(body["results"][0]) == "Zorb_town"
+    assert matched(body["results"][0]) == ["Zorb_town"]
+
+
+def test_cites_the_phrase_after_multibyte_characters(corpus, make_client):
+    body = make_client().get(URL, params={"q": "Quorvale Basin"}).json()
+
+    assert leaves(body, corpus) == [("late", 11)]
+    # The lone "Basin" at the start is not the phrase.
+    assert body["results"][0]["snippets"] == [
+        {"text": "The Quorvale Basin lies here.", "match_start": 4, "match_end": 18}
+    ]
 
 
 def test_no_matches(corpus, make_client):
@@ -344,3 +363,31 @@ def test_repository_finds_passages_by_score_and_pages_them(migrated_db, corpus):
     )
     assert (many.volume, many.issue, many.printed_page) == ("50", "5", "5")
     assert many.search_text == MANY
+
+
+def test_repository_splits_the_query_as_the_index_does(migrated_db):
+    terms = _repository_call(
+        migrated_db,
+        lambda repo: repo.query_terms("Zorb_town O'Brien, Gas-Light 3.5 %%"),
+    )
+
+    assert terms == ["zorb_town", "o'brien", "gas", "light", "3.5"]
+
+
+def test_repository_finds_no_terms_in_a_query_without_words(migrated_db):
+    assert (
+        _repository_call(migrated_db, lambda repo: repo.query_terms("%% -- ..")) == []
+    )
+
+
+def test_repository_reports_word_positions_as_character_offsets(migrated_db, corpus):
+    [match] = _repository_call(
+        migrated_db, lambda repo: repo.find_passages("Quorvale Basin", 10, 0)
+    )
+
+    # Every occurrence of each query word, in order, including the lone "Basin".
+    assert [match.search_text[start:end] for start, end in match.word_spans] == [
+        "Basin",
+        "Quorvale",
+        "Basin",
+    ]
