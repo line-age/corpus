@@ -1,0 +1,24 @@
+migrations/versions/2026_11_23_0004_search_on_pg_search.py
+  s_f54981f6c1dee5::t_87bc69d16a561a 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "fd98ae3eb1c8077657817398199c9a17c2b47855",
+  "prompts": {},
+  "humans": {
+    "h_677ed464d6b3fb": {
+      "author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_f54981f6c1dee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e83f380c-cda1-4f06-b860-52bebd450e06",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  }
+}
