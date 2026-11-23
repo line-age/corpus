@@ -4,6 +4,10 @@
 
 Closes #
 
+## How It Works
+
+<!-- Optional: a mermaid diagram of the flow this branch adds or changes. Delete this section if the change stays inside one component. -->
+
 ## What Changed?
 
 <!-- Changes grouped by theme under bold labels (e.g. **Search API**), with bullets naming files or classes in backticks. -->
