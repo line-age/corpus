@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from corpus import __version__
+from corpus.api.middlewares.request_id import RequestIdMiddleware
 from corpus.api.middlewares.request_logger import RequestLoggerMiddleware
 from corpus.api.modules.health.router import router as health_router
 from corpus.api.modules.search.router import router as search_router
@@ -47,6 +48,8 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if docs else None,
     )
     app.add_middleware(RequestLoggerMiddleware)
+    # Added last, so it runs outermost and the request log line carries the request ID.
+    app.add_middleware(RequestIdMiddleware)
 
     @app.get("/", tags=["meta"])
     async def index() -> IndexResponse:

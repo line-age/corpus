@@ -13,15 +13,38 @@ collecting the stream to the platform. Each line is one object:
 Anything passed as `extra=` becomes a top-level key, so log tools can filter on it. Call
 configure_logging() once at startup (create_app does); until then, Python's defaults
 apply: WARNING and above, as plain text on stderr.
+
+Records made while request_id_var is set, which RequestIdMiddleware does for each HTTP
+request, also get a `request_id` key, without the caller passing it.
 """
 
 import json
 import logging
 import sys
+from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
 
+request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
+"""The ID of the request being handled, or None outside a request. Each request runs in
+its own asyncio task, which has its own copy of this value, so concurrent requests never
+see each other's IDs."""
+
+
+class _RequestIdFilter(logging.Filter):
+    """Adds the current request ID to each record. It is a logger filter rather than part
+    of the formatter so that the field is on the record itself, where pytest's caplog and
+    any other handler see it too."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        request_id = request_id_var.get()
+        if request_id is not None and not hasattr(record, "request_id"):
+            record.request_id = request_id  # an explicit extra={"request_id": ...} wins
+        return True
+
+
 logger = logging.getLogger("corpus")
+logger.addFilter(_RequestIdFilter())
 
 # Attributes every LogRecord has, so anything else on a record came from `extra=`.
 # color_message is an extra uvicorn adds to some records: the message with ANSI colours.

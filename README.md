@@ -155,6 +155,11 @@ startup and shutdown messages. Every line has `time` (UTC), `level`, `logger` an
 `message`; request lines add `method`, `path`, `status` and `duration_ms`:
 
 ```json
-{"time": "2026-11-12T15:23:42.861Z", "level": "INFO", "logger": "corpus", "message": "GET /healthz 200 16.5ms", "method": "GET", "path": "/healthz", "status": 200, "duration_ms": 16.5}
+{"time": "2026-11-12T15:23:42.861Z", "level": "INFO", "logger": "corpus", "message": "GET /healthz 200 16.5ms", "method": "GET", "path": "/healthz", "status": 200, "duration_ms": 16.5, "request_id": "0b9f3c1e-6a2d-4c55-9a8e-1f4b7d2c9e01"}
 ```
+
+Every line logged while a request is handled has a `request_id`, so one request's lines can
+be found together. The API uses the caller's `X-Request-ID` header if it is up to 128
+letters, digits and `._:-`, generates a UUID otherwise, and returns the ID in the
+`X-Request-ID` response header.
 

@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 
-from corpus.lib.logger import JsonFormatter, configure_logging, logger
+from corpus.lib.logger import JsonFormatter, configure_logging, logger, request_id_var
 
 
 def _format(**kwargs) -> dict:
@@ -53,3 +53,33 @@ def test_configure_logging_replaces_handlers_instead_of_adding_more():
         assert [type(h.formatter) for h in uvicorn.handlers] == [JsonFormatter]
     finally:
         configure_logging("INFO")
+
+
+def test_records_carry_the_current_request_id(caplog):
+    token = request_id_var.set("req-1")
+    try:
+        logger.warning("inside a request")
+    finally:
+        request_id_var.reset(token)
+
+    [record] = caplog.records
+    assert record.request_id == "req-1"
+    assert json.loads(JsonFormatter().format(record))["request_id"] == "req-1"
+
+
+def test_an_explicit_request_id_extra_is_not_overwritten(caplog):
+    token = request_id_var.set("req-1")
+    try:
+        logger.warning("explicit", extra={"request_id": "given"})
+    finally:
+        request_id_var.reset(token)
+
+    [record] = caplog.records
+    assert record.request_id == "given"
+
+
+def test_records_outside_a_request_have_no_request_id(caplog):
+    logger.warning("outside a request")
+
+    [record] = caplog.records
+    assert not hasattr(record, "request_id")

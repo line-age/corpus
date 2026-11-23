@@ -40,7 +40,7 @@ src/corpus/
   lib/logger.py          the one corpus logger (JSON lines)
   api/
     main.py              create_app(): settings, logging, lifespan, middleware, routers
-    middlewares/         request logging
+    middlewares/         request IDs and request logging
     modules/<feature>/   one package per feature: router, service, repository, dto, exceptions
 packages/corpus_core/    the schema (Core tables in corpus_core.db) and ingest's building blocks
 apps/ingest/             the corpus-ingest CLI (`make corpus-ingest`)
@@ -128,6 +128,11 @@ checks are the one case; each method opens its own connection.
   and keep the client response brief, as `/healthz` does.
 - `RequestLoggerMiddleware` already logs every request with its duration, and uvicorn's
   access log is turned off. Don't add request logging in individual endpoints.
+- `RequestIdMiddleware` sets `request_id_var` for each request, and a filter on the logger
+  adds it to every record as `request_id`. Don't pass the request ID in `extra=` or down
+  through function arguments. A handler that needs it reads `request.state.request_id`.
+  Keep `RequestIdMiddleware` registered after `RequestLoggerMiddleware`, so it runs
+  outside it and the request log line has the ID.
 
 ## Health checks
 
