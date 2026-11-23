@@ -9,19 +9,20 @@ def test_healthy_when_database_is_migrated(migrated_db, make_client):
     assert body["status"] == "ok"
     assert body["version"] == __version__
     assert body["checks"]["database"]["status"] == "ok"
-    assert body["checks"]["pgvector"]["status"] == "ok"
-    assert body["checks"]["pgvector"]["detail"].startswith("vector ")
+    assert body["checks"]["pg_search"]["status"] == "ok"
+    assert body["checks"]["pg_search"]["detail"].startswith("pg_search ")
 
 
-def test_unhealthy_when_pgvector_is_not_installed(bare_db, make_client):
+def test_unhealthy_when_the_search_index_is_missing(bare_db, make_client):
     response = make_client().get("/healthz")
 
     assert response.status_code == 503
     body = response.json()
     assert body["status"] == "error"
     assert body["checks"]["database"]["status"] == "ok"
-    assert body["checks"]["pgvector"]["status"] == "error"
-    assert "not installed" in body["checks"]["pgvector"]["detail"]
+    assert body["checks"]["pg_search"]["status"] == "error"
+    # ParadeDB may install pg_search in every new database; the index needs the migrations.
+    assert body["checks"]["pg_search"]["detail"].endswith("run the migrations")
 
 
 def test_unhealthy_when_database_is_unreachable(configure, make_client):

@@ -127,10 +127,10 @@ passage = Table(
 
 BM25_INDEX = "passage_bm25"
 
+# Migration 0004 creates the same index; keep the two in step. The first column is the key.
 BM25_DDL = f"""
 CREATE INDEX IF NOT EXISTS {BM25_INDEX} ON passage
 USING bm25 (id, search_text, issue_date)
-WITH (key_field = 'id')
 """
 
 

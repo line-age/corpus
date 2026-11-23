@@ -13,32 +13,18 @@ services:
       # Live code; the virtualenv lives at /opt/venv, outside the mount.
       - .:/app
     depends_on:
-      corpus-db:
+      corpus-ingest-db:
         condition: service_healthy
     networks:
       - lineage
     restart: unless-stopped
 
-  corpus-db:
-    image: pgvector/pgvector:0.8.7-pg18
-    # Reads POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB, the same values the API uses.
-    env_file: .env
-    volumes:
-      - corpus-db-data:/var/lib/postgresql
-    healthcheck:
-      # Check over TCP, as the API connects. On a fresh volume the entrypoint's temporary
-      # init server listens only on the Unix socket, so a socket check can pass too early.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    networks:
-      - lineage
-    restart: unless-stopped
-
-  # ParadeDB adds pg_search, which the BM25 index needs.
+  # The one database: ingest writes to it and the API searches it. ParadeDB adds pg_search,
+  # whose BM25 index ranks search results. Search uses pg_search's `###` operator and
+  # pdb.score(), so keep the version pinned. Reads POSTGRES_USER, POSTGRES_PASSWORD and
+  # POSTGRES_DB, the same values the API uses.
   corpus-ingest-db:
-    image: paradedb/paradedb:latest # pin a version tag before sharing
+    image: paradedb/paradedb:0.27.0-pg18
     env_file: .env
     ports:
       - "${FORWARD_INGEST_DB_PORT:-5433}:5432"
@@ -46,6 +32,8 @@ services:
       # The parent of PGDATA, so it works on Postgres 18 and earlier.
       - corpus-ingest-db-data:/var/lib/postgresql
     healthcheck:
+      # Check over TCP, as the API connects. On a fresh volume the entrypoint's temporary
+      # init server listens only on the Unix socket, so a socket check can pass too early.
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       timeout: 3s
@@ -88,7 +76,6 @@ services:
       - lineage
 
 volumes:
-  corpus-db-data:
   corpus-ingest-db-data:
   corpus-raw-data:
   corpus-minio-data:

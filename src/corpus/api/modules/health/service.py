@@ -26,7 +26,7 @@ class HealthService:
     async def check(self) -> HealthResponse:
         checks: dict[str, Check] = {
             "database": self._check_database,
-            "pgvector": self._check_pgvector,
+            "pg_search": self._check_search_index,
         }
         results = await asyncio.gather(
             *(self._run(name, check) for name, check in checks.items())
@@ -41,11 +41,15 @@ class HealthService:
         await self._repository.ping()
         return None
 
-    async def _check_pgvector(self) -> str | None:
-        version = await self._repository.get_pgvector_version()
-        if version is None:
-            raise CheckFailed("vector extension is not installed; run the migrations")
-        return f"vector {version}"
+    async def _check_search_index(self) -> str | None:
+        status = await self._repository.get_search_index_status()
+        if status.pg_search_version is None:
+            raise CheckFailed(
+                "pg_search extension is not installed; run the migrations"
+            )
+        if not status.index_exists:
+            raise CheckFailed("search index is missing; run the migrations")
+        return f"pg_search {status.pg_search_version}"
 
     async def _run(self, name: str, check: Check) -> CheckResult:
         start = time.perf_counter()
