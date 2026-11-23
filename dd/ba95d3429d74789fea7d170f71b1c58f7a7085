@@ -1,0 +1,31 @@
+AGENTS.md
+  s_3fd39a87c62ce8::t_470e6f401ec1fd 43,131-135
+README.md
+  s_3fd39a87c62ce8::t_851839c3a667a0 158,161-165
+src/corpus/api/main.py
+  s_3fd39a87c62ce8::t_939e882de5518f 8,51-52
+src/corpus/api/middlewares/request_id.py
+  s_3fd39a87c62ce8::t_9eb732063a8aac 1-60
+src/corpus/lib/logger.py
+  s_3fd39a87c62ce8::t_5582fe4965e979 16-18,24,28-45,47
+tests/test_logger.py
+  s_3fd39a87c62ce8::t_3f7007623e1090 5,56-85
+tests/test_request_id.py
+  s_3fd39a87c62ce8::t_d76733a59569a1 1-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "ddba95d3429d74789fea7d170f71b1c58f7a7085",
+  "prompts": {},
+  "sessions": {
+    "s_3fd39a87c62ce8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9866fa3e-d356-4bd7-a3c4-befb8af1f771",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  }
+}
