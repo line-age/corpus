@@ -1,4 +1,6 @@
-"""Database engine, sessions and ORM base, shared by the search API and (later) ingest.
+"""Database engine and sessions for the API.
+
+The tables are the ingest schema, defined as SQLAlchemy Core tables in corpus_core.db.
 
 Endpoints get a session by dependency injection:
 
@@ -26,14 +28,8 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.orm import DeclarativeBase
 
 from corpus.config import Settings
-
-
-class Base(DeclarativeBase):
-    """Base class for ORM models. Its metadata is what Alembic autogenerate compares against."""
-    pass
 
 
 def make_engine(settings: Settings) -> AsyncEngine:

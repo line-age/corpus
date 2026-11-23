@@ -1,7 +1,7 @@
 """End to end over a real Postgres: every stage on two mocked Internet Archive items.
 
-Run with CORPUS_TEST_DATABASE_URL pointing at an empty database. The BM25 step needs the
-pg_search extension (ParadeDB); without it that step is skipped and everything else still runs.
+Run with CORPUS_TEST_DATABASE_URL pointing at an empty ParadeDB database: the migrations
+create the pg_search extension and the BM25 index.
 """
 
 import hashlib
@@ -148,23 +148,16 @@ async def test_every_stage(repo, tmp_path, hocr_bytes, page_numbers_bytes):
     repo.mark(ITEMS[0]["identifier"], "pages", ok=True)
     assert repo.pending("normalise", PGJ) == [ITEMS[0]["identifier"]]
 
-    try:
-        res = S.index_stage(repo, sel)
-    except Exception as e:  # plain Postgres without pg_search
-        if "pg_search" not in str(e) and "bm25" not in str(e):
-            raise
-        pytest.skip(f"pg_search not installed; BM25 step not exercised ({e})")
-    else:
-        assert res.done == 1  # the other item is waiting on normalise again
-        # Re-marking pages withdrew the issue's passages; rebuild them to search.
-        for stage in (S.normalise_stage(repo, sel), S.passages_stage(repo, sel)):
-            assert stage.done == 1
-        assert S.index_stage(repo, sel).done == 1
-        with repo.engine.connect() as c:
-            hits = c.execute(
-                text("SELECT count(*) FROM passage WHERE search_text @@@ 'Martinsville'")
-            ).scalar_one()
-        assert hits >= 1
+    assert S.index_stage(repo, sel).done == 1  # the other item is waiting on normalise again
+    # Re-marking pages withdrew the issue's passages; rebuild them to search.
+    for stage in (S.normalise_stage(repo, sel), S.passages_stage(repo, sel)):
+        assert stage.done == 1
+    assert S.index_stage(repo, sel).done == 1
+    with repo.engine.connect() as c:
+        hits = c.execute(
+            text("SELECT count(*) FROM passage WHERE search_text @@@ 'Martinsville'")
+        ).scalar_one()
+    assert hits >= 1
 
 
 def test_items_outside_the_window_stop_after_lane_and_are_withdrawn(repo):

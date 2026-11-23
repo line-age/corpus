@@ -1,39 +1,60 @@
-"""SearchService against a mocked repository: phrase matching, snippets and paging."""
+"""SearchService against a mocked repository: citations, snippets and paging.
+
+Matching and ranking happen in pg_search; test_search.py covers them against the database.
+"""
 
 import asyncio
+import logging
 from datetime import date
 from unittest.mock import create_autospec
 
 import pytest
 
-from corpus.api.modules.search.repository import CorpusStats, SearchRepository
-from corpus.api.modules.search.service import SNIPPET_CONTEXT, SearchService, bm25
-from corpus.models import Document, Page
+from corpus.api.modules.search.repository import PassageMatch, SearchRepository
+from corpus.api.modules.search.service import (
+    SNIPPET_CONTEXT,
+    SearchService,
+    find_phrase,
+    snippet,
+    tokens,
+)
 
-def make_page(text: str, leaf_number: int = 0, page_number: str | None = None) -> Page:
-    document = Document(
-        id=1,
+BASE_URL = "https://archive.example"
+
+
+def make_match(
+    text: str, leaf: int = 0, printed_page: str | None = None, score: float = 1.0
+) -> PassageMatch:
+    return PassageMatch(
         identifier="oilgasjournal-test",
         title="The Oil and Gas Journal",
-        publication_date=date(1951, 6, 7),
+        issue_date=date(1951, 6, 7),
         volume="50",
         issue="5",
-        source_url="https://archive.org/details/oilgasjournal-test",
+        leaf=leaf,
+        printed_page=printed_page,
+        search_text=text,
+        score=score,
     )
-    return Page(leaf_number=leaf_number, page_number=page_number, text=text, document=document)
 
 
 @pytest.fixture
 def repository():
-    """A SearchRepository mock that finds no pages. Autospec limits it to the real class's
+    """A SearchRepository mock that finds nothing. Autospec limits it to the real class's
     methods and signatures, so a renamed or removed method fails the test."""
     mock = create_autospec(SearchRepository, instance=True)
-    mock.find_pages_containing.return_value = []
+    mock.count_passages.return_value = 0
+    mock.find_passages.return_value = []
     return mock
 
 
-def search(repository, query: str, limit: int = 20, offset: int = 0, *, ranking: bool = False):
-    service = SearchService(repository, ranking=ranking)
+def found(repository, *matches: PassageMatch, total: int | None = None) -> None:
+    repository.find_passages.return_value = list(matches)
+    repository.count_passages.return_value = len(matches) if total is None else total
+
+
+def search(repository, query: str, limit: int = 20, offset: int = 0):
+    service = SearchService(repository, archive_org_base_url=BASE_URL)
     return asyncio.run(service.search(query, limit=limit, offset=offset))
 
 
@@ -46,84 +67,81 @@ def test_no_matches(repository):
 
     assert result.total == 0
     assert result.results == []
-    repository.find_pages_containing.assert_awaited_once_with(["Martin", "County"])
+    repository.count_passages.assert_awaited_once_with("Martin County")
+    # Nothing to fetch when nothing matches.
+    repository.find_passages.assert_not_awaited()
 
 
-def test_a_candidate_page_without_the_phrase_yields_nothing(repository):
-    # The repository matches words anywhere on the page; the service requires the phrase.
-    repository.find_pages_containing.return_value = [
-        make_page("County roads in Martin are long. Martin, County Clare.")
-    ]
+def test_passes_the_query_limit_and_offset_to_the_repository(repository):
+    found(repository, make_match("Martin County well."), total=30)
 
-    assert search(repository, "Martin County").total == 0
+    result = search(repository, "Martin County", limit=5, offset=10)
 
-
-def test_every_occurrence_on_a_page_is_a_result(repository):
-    repository.find_pages_containing.return_value = [
-        make_page("Martin County well. Another Martin County test. Third in Martin County.")
-    ]
-
-    result = search(repository, "Martin County")
-
-    assert result.total == 3
-    assert [hit.snippet for hit in result.results] == [
-        "Martin County well.",
-        "Another Martin County test.",
-        "Third in Martin County.",
-    ]
-    assert all(matched(hit) == "Martin County" for hit in result.results)
+    repository.find_passages.assert_awaited_once_with("Martin County", 5, 10)
+    assert (result.total, result.limit, result.offset) == (30, 5, 10)
 
 
-def test_phrase_matches_across_a_line_break(repository):
-    repository.find_pages_containing.return_value = [
-        make_page(
-            "Humble Oil has staked location for a northwest Martin\nCounty wildcat. Next."
-        )
-    ]
+def test_offset_past_the_end_returns_the_total_without_fetching(repository):
+    repository.count_passages.return_value = 2
 
-    result = search(repository, "Martin County")
+    result = search(repository, "Martin", offset=2)
 
-    assert result.total == 1
-    hit = result.results[0]
-    assert hit.snippet == "Humble Oil has staked location for a northwest Martin County wildcat."
-    assert matched(hit) == "Martin County"
+    assert result.total == 2
+    assert result.results == []
+    repository.find_passages.assert_not_awaited()
 
 
-def test_matches_whole_words_only(repository):
-    repository.find_pages_containing.return_value = [
-        make_page("Martinez field. Martinville gas. Martin well. (Martin) test.")
-    ]
+@pytest.mark.parametrize("query", ["%%", "-- ..", "!?"])
+def test_a_query_without_words_skips_the_database(repository, query):
+    result = search(repository, query)
 
-    result = search(repository, "Martin")
-
-    assert [matched(hit) for hit in result.results] == ["Martin", "Martin"]
-    assert [hit.snippet for hit in result.results] == ["Martin well.", "(Martin) test."]
+    assert (result.query, result.total, result.results) == (query, 0, [])
+    repository.count_passages.assert_not_awaited()
 
 
-def test_matching_ignores_case_and_keeps_the_original_text(repository):
-    repository.find_pages_containing.return_value = [make_page("A MARTIN county well.")]
+def test_results_keep_the_repository_order_and_scores(repository):
+    found(
+        repository,
+        make_match("Tulsa, Tulsa and Tulsa.", leaf=2, score=1.234567),
+        make_match("Tulsa once.", leaf=1, score=0.5),
+    )
 
-    result = search(repository, "martin COUNTY")
+    result = search(repository, "Tulsa")
 
-    assert result.total == 1
-    assert matched(result.results[0]) == "MARTIN county"
-
-
-def test_query_regex_characters_are_literal(repository):
-    repository.find_pages_containing.return_value = [make_page("Pay is 3.5 ft. Pay is 3x5 ft.")]
-
-    result = search(repository, "3.5 ft")
-
-    assert [matched(hit) for hit in result.results] == ["3.5 ft"]
+    assert [hit.page.leaf_number for hit in result.results] == [2, 1]
+    assert [hit.score for hit in result.results] == [1.2346, 0.5]
 
 
-def test_snippet_is_the_statement_containing_the_match(repository):
-    repository.find_pages_containing.return_value = [
-        make_page(
-            "First sentence here! Then   a\n\tsecond about Martin County,\nwhich ends? "
-            "Third.\n\nNew paragraph."
-        )
-    ]
+def test_citation_links_to_the_page(repository):
+    found(repository, make_match("Martin County.", leaf=148, printed_page="145"))
+
+    hit = search(repository, "Martin County").results[0]
+
+    assert hit.document.identifier == "oilgasjournal-test"
+    assert hit.document.title == "The Oil and Gas Journal"
+    assert hit.document.publication_date == date(1951, 6, 7)
+    assert (hit.document.volume, hit.document.issue) == ("50", "5")
+    assert hit.document.source_url == f"{BASE_URL}/details/oilgasjournal-test"
+    assert hit.page.leaf_number == 148
+    assert hit.page.page_number == "145"
+    assert hit.page.url == f"{BASE_URL}/details/oilgasjournal-test/page/n148"
+
+
+def test_a_trailing_slash_on_the_base_url_is_ignored(repository):
+    found(repository, make_match("Martin."))
+    service = SearchService(repository, archive_org_base_url=f"{BASE_URL}/")
+
+    hit = asyncio.run(service.search("Martin", limit=20, offset=0)).results[0]
+
+    assert hit.document.source_url == f"{BASE_URL}/details/oilgasjournal-test"
+
+
+def test_snippet_is_the_statement_containing_the_first_match(repository):
+    found(
+        repository,
+        make_match("First sentence here! Then a second about Martin County, which ends? "
+                   "Then Martin County again."),
+    )
 
     hit = search(repository, "Martin County").results[0]
 
@@ -131,20 +149,81 @@ def test_snippet_is_the_statement_containing_the_match(repository):
     assert matched(hit) == "Martin County"
 
 
-def test_a_blank_line_ends_a_statement(repository):
-    repository.find_pages_containing.return_value = [
-        make_page("HEADLINE ABOUT DRILLING\n\nMartin County wildcat spudded\n\nNext item")
-    ]
+def test_matching_ignores_case_and_keeps_the_original_text(repository):
+    found(repository, make_match("A MARTIN county well."))
+
+    hit = search(repository, "martin COUNTY").results[0]
+
+    assert matched(hit) == "MARTIN county"
+
+
+def test_punctuation_between_the_words_is_ignored_as_the_index_ignores_it(repository):
+    found(repository, make_match("Drilled in Martin, County Clare."))
 
     hit = search(repository, "Martin County").results[0]
 
-    assert hit.snippet == "Martin County wildcat spudded"
+    assert matched(hit) == "Martin, County"
+
+
+def test_a_match_the_service_cannot_locate_cites_the_start_of_the_passage(repository, caplog):
+    found(repository, make_match("Opening statement. Nothing like the query here."))
+
+    with caplog.at_level(logging.WARNING, logger="corpus"):
+        hit = search(repository, "Martin County").results[0]
+
+    assert hit.snippet == "Opening statement."
+    assert hit.match_start == hit.match_end == 0
+    assert any(r.getMessage() == "search match not located in passage" for r in caplog.records)
+    # The query is not logged.
+    assert "Martin" not in caplog.text
+
+
+# Tokenizing as the index does
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Martin County", ["martin", "county"]),
+        ("Gas-Light co.", ["gas", "light", "co"]),
+        ("O'Brien and O’Brien", ["o'brien", "and", "o’brien"]),
+        ("3.5 ft, 1,000 bbl", ["3.5", "ft", "1,000", "bbl"]),
+        ("Zorb_town Zorb%town", ["zorb_town", "zorb", "town"]),
+        ("a:b 1:2", ["a:b", "1", "2"]),
+        ("café über", ["café", "über"]),
+        ("%% -- ..", []),
+    ],
+)
+def test_tokens_split_like_unicode_words(text, expected):
+    assert tokens(text) == expected
+
+
+def test_find_phrase_matches_whole_words_only():
+    text = "Martinez field. Martinville gas. Martin well."
+
+    start, end = find_phrase(text, ["martin"])
+
+    assert text[start:end] == "Martin"
+    assert start == text.index("Martin well")
+
+
+def test_find_phrase_requires_the_words_in_order():
+    assert find_phrase("County of Martin", ["martin", "county"]) is None
+    assert find_phrase("Martin County", []) is None
+
+
+# Snippets
+
+
+def test_a_blank_line_ends_a_statement():
+    text = "HEADLINE ABOUT DRILLING\n\nMartin County wildcat spudded\n\nNext item"
+    start = text.index("Martin")
+
+    assert snippet(text, start, start + 13)[0] == "Martin County wildcat spudded"
 
 
 def test_snippet_ends_with_a_closing_quote(repository):
-    repository.find_pages_containing.return_value = [
-        make_page('He said "drill in Martin County." Then left.')
-    ]
+    found(repository, make_match('He said "drill in Martin County." Then left.'))
 
     assert search(repository, "Martin County").results[0].snippet == (
         'He said "drill in Martin County."'
@@ -153,9 +232,7 @@ def test_snippet_ends_with_a_closing_quote(repository):
 
 def test_long_statements_are_cut_at_word_boundaries(repository):
     words = " ".join(f"word{i}" for i in range(200))
-    repository.find_pages_containing.return_value = [
-        make_page(f"{words} Martin County {words}")
-    ]
+    found(repository, make_match(f"{words} Martin County {words}"))
 
     hit = search(repository, "Martin County").results[0]
 
@@ -171,149 +248,10 @@ def test_long_statements_are_cut_at_word_boundaries(repository):
     assert set(after.split()) <= set(words.split())
 
 
-def test_short_page_without_sentence_ends_is_kept_whole(repository):
-    repository.find_pages_containing.return_value = [make_page("a Martin County b")]
+def test_short_passage_without_sentence_ends_is_kept_whole(repository):
+    found(repository, make_match("a Martin County b"))
 
     hit = search(repository, "Martin County").results[0]
 
     assert hit.snippet == "a Martin County b"
     assert (hit.match_start, hit.match_end) == (2, 15)
-
-
-def test_citation_links_to_the_page(repository):
-    repository.find_pages_containing.return_value = [
-        make_page("Martin County.", leaf_number=148, page_number="145")
-    ]
-
-    hit = search(repository, "Martin County").results[0]
-
-    assert hit.document.identifier == "oilgasjournal-test"
-    assert hit.document.publication_date == date(1951, 6, 7)
-    assert hit.page.leaf_number == 148
-    assert hit.page.page_number == "145"
-    assert hit.page.url == "https://archive.org/details/oilgasjournal-test/page/n148"
-
-
-def test_offset_and_limit_page_through_all_occurrences(repository):
-    repository.find_pages_containing.return_value = [
-        make_page("Martin one. Martin two.", leaf_number=1),
-        make_page("Martin three. Martin four. Martin five.", leaf_number=2),
-    ]
-
-    result = search(repository, "Martin", limit=2, offset=1)
-
-    assert result.total == 5
-    assert (result.limit, result.offset) == (2, 1)
-    assert [hit.snippet for hit in result.results] == ["Martin two.", "Martin three."]
-    assert [hit.page.leaf_number for hit in result.results] == [1, 2]
-
-
-def test_offset_past_the_end_returns_the_total_and_no_results(repository):
-    repository.find_pages_containing.return_value = [make_page("Martin one. Martin two.")]
-
-    result = search(repository, "Martin", offset=5)
-
-    assert result.total == 2
-    assert result.results == []
-
-
-# Ranking (the SEARCH_RANKING_ENABLED feature flag)
-
-STATS = CorpusStats(pages=1000, average_page_length=100.0)
-
-
-def test_without_ranking_results_are_in_corpus_order_without_scores(repository):
-    repository.find_pages_containing.return_value = [
-        make_page("Tulsa once.", leaf_number=1),
-        make_page("Tulsa, Tulsa and Tulsa again.", leaf_number=2),
-    ]
-
-    result = search(repository, "Tulsa")
-
-    assert result.order == "corpus"
-    assert [hit.page.leaf_number for hit in result.results] == [1, 2, 2, 2]
-    assert {hit.score for hit in result.results} == {None}
-    repository.get_corpus_stats.assert_not_awaited()
-
-
-def test_ranking_puts_the_page_with_more_occurrences_first(repository):
-    repository.get_corpus_stats.return_value = STATS
-    repository.find_pages_containing.return_value = [
-        make_page("Tulsa once, among other news of the day.", leaf_number=1),
-        make_page("Tulsa, Tulsa and Tulsa again, all day.", leaf_number=2),
-    ]
-
-    result = search(repository, "Tulsa", ranking=True)
-
-    assert result.order == "relevance"
-    assert [hit.page.leaf_number for hit in result.results] == [2, 2, 2, 1]
-    scores = [hit.score for hit in result.results]
-    assert scores == sorted(scores, reverse=True)
-    assert len(set(scores[:3])) == 1  # occurrences on one page share its score
-    assert scores[0] > scores[3]
-
-
-def test_ranking_puts_the_shorter_page_first_when_counts_are_equal(repository):
-    repository.get_corpus_stats.return_value = STATS
-    repository.find_pages_containing.return_value = [
-        make_page("Tulsa " + "and other news " * 40, leaf_number=1),
-        make_page("Tulsa news.", leaf_number=2),
-    ]
-
-    result = search(repository, "Tulsa", ranking=True)
-
-    assert [hit.page.leaf_number for hit in result.results] == [2, 1]
-
-
-def test_ranking_keeps_corpus_order_for_equal_scores(repository):
-    repository.get_corpus_stats.return_value = STATS
-    repository.find_pages_containing.return_value = [
-        make_page("Tulsa news. More Tulsa.", leaf_number=leaf) for leaf in (5, 3, 9)
-    ]
-
-    result = search(repository, "Tulsa", ranking=True)
-
-    # The repository's order (here 5, 3, 9) is corpus order; within a page, position.
-    assert [hit.page.leaf_number for hit in result.results] == [5, 5, 3, 3, 9, 9]
-    assert [hit.snippet for hit in result.results] == ["Tulsa news.", "More Tulsa."] * 3
-
-
-def test_ranking_pages_after_sorting(repository):
-    repository.get_corpus_stats.return_value = STATS
-    repository.find_pages_containing.return_value = [
-        make_page("Tulsa once, among other news of the day.", leaf_number=1),
-        make_page("Tulsa, Tulsa and Tulsa again, all day.", leaf_number=2),
-    ]
-
-    result = search(repository, "Tulsa", limit=2, offset=2, ranking=True)
-
-    assert result.total == 4
-    assert [hit.page.leaf_number for hit in result.results] == [2, 1]
-
-
-def test_ranking_without_matches_skips_the_corpus_stats(repository):
-    result = search(repository, "Tulsa", ranking=True)
-
-    assert (result.order, result.total) == ("relevance", 0)
-    repository.get_corpus_stats.assert_not_awaited()
-
-
-def test_bm25_grows_with_occurrences_but_with_diminishing_returns():
-    one, two, three = (bm25(n, 100, 10, STATS) for n in (1, 2, 3))
-
-    assert 0 < one < two < three
-    assert three - two < two - one
-
-
-def test_bm25_falls_as_pages_get_longer():
-    assert bm25(1, 50, 10, STATS) > bm25(1, 100, 10, STATS) > bm25(1, 400, 10, STATS)
-
-
-def test_bm25_is_higher_for_a_phrase_on_fewer_pages():
-    assert bm25(1, 100, 5, STATS) > bm25(1, 100, 500, STATS) > 0
-
-
-def test_bm25_handles_a_corpus_of_empty_pages():
-    empty = CorpusStats(pages=1, average_page_length=0.0)
-
-    assert bm25(1, 0, 1, empty) > 0

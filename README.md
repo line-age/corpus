@@ -25,11 +25,11 @@ The source is [docs/corpus_sys_diagram.drawio](docs/corpus_sys_diagram.drawio); 
 ## Running it
 
 ```sh
-make setup        # build the images; start the API, its Postgres (pgvector) and the ingest database
-make db-migrate   # apply migrations, including enabling the vector extension
+make setup        # build the images; start the API and its database (ParadeDB)
+make db-migrate   # apply migrations, including pg_search and the BM25 search index
 curl localhost:9001/healthz
-make ingest ITEM=sim_oil-gas-journal_1951-06-07_50_5
-curl 'localhost:9001/api/v1/search?q=Martin%20County'
+make corpus-ingest ARGS="run -c pub_pipeline-gas-journal --ids /fixtures/pgj-sample-15.txt"
+curl 'localhost:9001/api/v1/search?q=natural%20gas'
 ```
 
 The first `make` creates `.env` from `.env.example`. With `DOCS_ENABLED=true` (the example
@@ -45,7 +45,6 @@ default), interactive docs are at <http://localhost:9001/docs>.
 | `make test` | Run pytest in a container; pass options with `ARGS="-k health"` |
 | `make db-migrate` | Apply Alembic migrations (`alembic upgrade head`) |
 | `make lock` | Update `uv.lock` after changing dependencies in `pyproject.toml` |
-| `make ingest ITEM=<id>` | Ingest an archive.org item's OCR text; `ARGS="--collection <name> ..."` for collections (see [Ingest](#ingest)). To be removed soon in favor of the `corpus-ingest` target |
 | `make corpus-ingest ARGS="<command> ..."` | Run the `apps/ingest` pipeline CLI in compose, rebuilding its image first; no `ARGS` shows its help |
 
 Tests use their own databases (`<POSTGRES_DB>_test` and `<POSTGRES_DB>_test_bare`), recreated
@@ -63,13 +62,13 @@ src/corpus/             the API
 packages/corpus_core/   index format: schema and migrations, collections, lanes, hOCR parsing,
                         normalisation, passages, Internet Archive client, raw store
 apps/ingest/            the corpus-ingest CLI: one command per stage
-tests/                  API and ingest tests; the ingest end-to-end test needs Postgres
+tests/                  API and ingest tests; the ingest end-to-end test needs ParadeDB
 fixtures/               identifier lists for real runs
 ```
 
-Ingest has its own database, `corpus-ingest-db` (ParadeDB, for `pg_search`), which `make up`
-starts alongside the API's. Both share one migration history in `migrations/`, and
-`make db-migrate` applies it to both. Ingest needs outbound HTTPS to `archive.org` and
+Ingest and the API share one database, `corpus-ingest-db` (ParadeDB, for `pg_search`): ingest
+writes it and search reads it. Its schema is in `packages/corpus_core` and its migrations in
+`migrations/`; `make db-migrate` applies them. Ingest needs outbound HTTPS to `archive.org` and
 `*.us.archive.org`. Run it in compose with `make corpus-ingest`, which rebuilds the ingest
 image so it has your latest changes and mounts `fixtures/` at `/fixtures` (raw files go to the
 `corpus-raw-data` volume):
@@ -95,88 +94,51 @@ failed items are retried up to three times, and finishing a stage for an item re
 after it. `--force` redoes items regardless. Set `CORPUS_TEST_DATABASE_URL` to run the ingest
 end-to-end test; without it, that test is skipped.
 
-## Ingest (temporary)
-
-To be retired. Use the ingestion pipeline above.
-`make ingest ITEM=<identifier>` downloads an archive.org item's OCR text and stores it, one
-row per scanned page, so search results can cite their page. It runs
-`python -m corpus.ingestion <identifier> [<identifier> ...]` in the API container.
-
-- The text comes from the item's hOCR derivatives (`_hocr_searchtext.txt.gz` and
-  `_hocr_pageindex.json.gz`), which hold the same OCR as `_djvu.txt` but record where each
-  page starts. Printed page numbers come from `_page_numbers.json` when the item has one,
-  and the title, date, volume and issue from its metadata.
-- Each item is written in one transaction. Ingesting an item again replaces its pages, so
-  it is safe to repeat.
-- It exits 0 when every item succeeded, 1 when any failed and 2 for bad arguments.
-
-Whole collections are ingested with `ARGS`, for example the pre-1920 issues of three
-trade journals, 50 evenly spaced issues from each:
-
-```sh
-make ingest ARGS="--collection pub_pipeline-gas-journal --collection pub_oil-gas-journal \
-  --collection pub_world-oil --to 1919-12-31 --sample 50 --skip-existing"
-```
-
-| Option | Meaning |
-| --- | --- |
-| `--collection <name>` | Ingest the items of an archive.org collection, oldest first (repeatable) |
-| `--from` / `--to YYYY-MM-DD` | Only collection items dated within these days, inclusive |
-| `--sample N` | Only N items per collection, evenly spaced from its first to its last |
-| `--skip-existing` | Leave items already stored alone; repeat an interrupted run to resume it |
-| `--concurrency N` | Items downloaded at once, 1 to 16 (default 4) |
-
-Data model (`src/corpus/models.py`): `documents` holds one row per item (identifier,
-title, publication date, volume, issue, `source_url`), and `pages` holds one row per
-scanned page (`leaf_number`, the 0-based position in the scan; `page_number`, the printed
-number or null; and `text`). A trigram index on `pages.text` serves the search filter.
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| `ARCHIVE_ORG_BASE_URL` | `https://archive.org` | Where items are fetched from; document and page links use it too |
-| `INGEST_HTTP_TIMEOUT_SECONDS` | `60` | How long each request waits to connect or for more data |
-
 ## Search
 
-`GET /api/v1/search?q=<words>` returns every occurrence of a word or phrase, such as a
-place name, with a citation for each: the document, the page (printed number, scan
-position and a link to that page of the scan) and the statement that contains it.
+`GET /api/v1/search?q=<words>` returns the passages of OCR text that contain a word or
+phrase, such as a place name, most relevant first, with a citation for each: the document,
+the page (printed number, scan position and a link to that page of the scan) and the
+statement that contains the phrase.
 
 - `q` is required, 2 to 200 characters. `limit` (1 to 100, default 20) and `offset`
-  (default 0) page through the occurrences; `total` counts all of them.
-- Matching ignores case, allows any whitespace between words (OCR breaks lines inside
-  phrases) and matches whole words only, so `Martin` does not match `Martinez`.
-- `match_start` and `match_end` locate the match within `snippet`, for highlighting.
-- Results are in corpus order (publication date, then page) by default. With the
-  `SEARCH_RANKING_ENABLED` feature flag on, they are ordered by relevance instead: each
-  page is scored with BM25, taking the whole phrase as the term, so pages that mention it
-  more often, and shorter pages, come first. Every result then carries its page's
-  `score`; otherwise `score` is null. `order` in the response says which applies.
+  (default 0) page through the results; `total` counts every matching passage.
+- Search runs in the database on [pg_search](https://docs.paradedb.com). The `passage_bm25`
+  index matches `q` as a phrase: the words in order, ignoring case and the punctuation
+  between them, and whole words only, so `Martin` does not match `Martinez`. Results are
+  ranked by each passage's BM25 `score`, highest first: passages that use the words more
+  often, passages whose words are rarer across the corpus, and shorter passages come first.
+- One result per passage. A passage is a window of about 250 words of a page (see
+  [docs/ingestion-plan.md](docs/ingestion-plan.md)), and passages overlap by 50 words.
+- `snippet` is the statement around the first match in the passage, from its normalised
+  text (whitespace collapsed, words hyphenated across a line break rejoined).
+  `match_start` and `match_end` locate the match within `snippet`, for highlighting.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `SEARCH_RANKING_ENABLED` | `false` | Feature flag: order results by relevance (BM25) instead of by date and page |
+| `ARCHIVE_ORG_BASE_URL` | `https://archive.org` | The base of the document and page links in results |
 
 ```json
 {
-  "query": "Martin County", "order": "corpus", "total": 3, "limit": 20, "offset": 0,
+  "query": "natural gas", "total": 12, "limit": 20, "offset": 0,
   "results": [{
-    "document": {"identifier": "sim_oil-gas-journal_1951-06-07_50_5", "title": "The Oil & Gas Journal 1951-06-07: Vol 50 Iss 5", "publication_date": "1951-06-07", "volume": "50", "issue": "5", "source_url": "https://archive.org/details/sim_oil-gas-journal_1951-06-07_50_5"},
-    "page": {"leaf_number": 148, "page_number": "145", "url": "https://archive.org/details/sim_oil-gas-journal_1951-06-07_50_5/page/n148"},
-    "snippet": "Breed- love, northwest Martin County wildcat, some 13 miles northwest of Tarzan, had proved 64 ft.",
-    "match_start": 23, "match_end": 36, "score": null
+    "document": {"identifier": "sim_pipeline-gas-journal_1926-10-30_125_22", "title": "American Gas Journal 1926-10-30: Vol 125 Iss 22", "publication_date": "1926-10-30", "volume": "125", "issue": "22", "source_url": "https://archive.org/details/sim_pipeline-gas-journal_1926-10-30_125_22"},
+    "page": {"leaf_number": 19, "page_number": "550", "url": "https://archive.org/details/sim_pipeline-gas-journal_1926-10-30_125_22/page/n19"},
+    "snippet": "The plant that is employed for the removal of gasoline from natural gas by absorption in charcoal consists of a number of absorption cylinders of horizontal type, which contain the activated charcoal and through it the casing-head gas is led.",
+    "match_start": 60, "match_end": 71, "score": 4.5199
   }]
 }
 ```
 
-Known limits of this first version: abbreviations such as "Co." end a snippet early; a
-word hyphenated across a line break in the OCR is not found; and every matching page is
-read to count and rank occurrences. Works for this POC - production-grade tooling with ParadeDB's pg_search will be required for full-text search queries (+ stemming) with ranking support.
+Known limits: a phrase that falls in the overlap between two passages is returned once for
+each; abbreviations such as "Co." end a snippet early; and there is no stemming, so `well`
+does not match `wells`.
 
 ## Service Status Endpoints
 
 - `GET /` names the service and its version, and links the docs when they are enabled.
-- `GET /healthz` reports each dependency (the database, and the pgvector extension in it).
+- `GET /healthz` reports each dependency (the database, and pg_search with the search index
+  in it).
   It answers 200 when all are healthy and 503 when any is not, so it works as a readiness
   probe. Failure details are kept short; the full error goes to the logs.
 
