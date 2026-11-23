@@ -1,0 +1,37 @@
+.claude/skills/write-pr-description/SKILL.md
+  s_68c3e3e6d631e6::t_ea57c4114606f5 73-75,99-104
+  s_e1879096733744::t_e2992cf59cbef6 61-62,69-71,91-97,122-125,135-169,184,197-200,204-207
+  h_677ed464d6b3fb 133-134
+  s_68c3e3e6d631e6::t_56c07b3ec0252c 76-78
+.github/pull_request_template.md
+  s_e1879096733744::t_19da591aca32c1 7-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "9a6e27b1273b16a9ba7bc2f965c7a6581867aa38",
+  "prompts": {},
+  "humans": {
+    "h_677ed464d6b3fb": {
+      "author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_68c3e3e6d631e6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a217e16c80b632e69",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <teniola.fatunmbi@internetbrands.com>"
+    },
+    "s_e1879096733744": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "71a79ef1-3517-4130-86a9-a2145de5d160",
+        "model": "unknown"
+      },
+      "human_author": "Teniola Fatunmbi <fatunmbiteniola001@gmail.com>"
+    }
+  }
+}
