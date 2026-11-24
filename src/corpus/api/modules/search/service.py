@@ -1,44 +1,41 @@
-"""Search logic: finds every occurrence of a phrase in the OCR text and cites it.
+"""Search logic: cites each passage that pg_search finds for a phrase.
 
-The repository narrows the search to pages that contain every word of the query. This
-module then matches the whole phrase on each of those pages and cuts, around each match,
-the statement that contains it.
+pg_search does the matching and ranking in the database (see the repository). It finds
+the passages that contain the query as a phrase and ranks them by BM25: a passage scores
+higher the more often the query's words occur in it, with diminishing returns, the rarer
+those words are across the corpus, and the shorter the passage is. This module only turns
+each passage into a citation with a snippet for each occurrence of the phrase.
 
-- The phrase matches case-insensitively, with any whitespace between its words (OCR
-  breaks lines mid-phrase) and whole words only at both ends, so "Martin" does not match
-  "Martinez".
-- A statement ends at ".", "!" or "?" followed by whitespace, or at a blank line.
-  Abbreviations such as "Co." end it early; SNIPPET_CONTEXT keeps long ones bounded.
-
-Results are in corpus order unless ranking is on (the SEARCH_RANKING_ENABLED feature
-flag). Ranking scores each page with BM25, taking the whole phrase as the term: a page
-scores higher the more often the phrase occurs on it, with diminishing returns, and lower
-the longer the page is, so an article about a place outranks a long list that names it
-in passing. Every occurrence on a page shares the page's score.
+- One result per passage. Passages overlap by 50 words, so a phrase in an overlap can be
+  cited twice, once from each passage.
+- Snippets are cut from the passage's normalised text (whitespace collapsed, words
+  hyphenated across a line break rejoined), which is the text the index matched.
+- Where the phrase is comes from pg_search too: the query's words as the index splits
+  them, and where each of them occurs in the passage. This module only picks out the
+  places those words occur together, in order.
+- A statement ends at ".", "!" or "?" followed by whitespace. Abbreviations such as "Co."
+  end it early; SNIPPET_CONTEXT keeps long ones bounded.
 """
 
-import math
 import re
 from collections.abc import Sequence
+from itertools import pairwise
 
 from corpus.api.modules.search.dto import (
     DocumentCitation,
-    Order,
     PageCitation,
     SearchHit,
     SearchResponse,
+    Snippet,
 )
-from corpus.api.modules.search.repository import CorpusStats, SearchRepository
-from corpus.models import Page
+from corpus.api.modules.search.repository import PassageMatch, SearchRepository, Span
+from corpus.lib.logger import logger
 
 SNIPPET_CONTEXT = 200
 """Most characters of context kept on each side of a match."""
 ELLIPSIS = "..."
 
-BM25_K1 = 1.2
-"""How quickly more occurrences on a page stop adding to its score."""
-BM25_B = 0.75
-"""How much a page's length counts against it: 0 not at all, 1 fully."""
+_WORD_CHARACTER = re.compile(r"\w")
 
 _CLOSERS = re.escape("\"')]’”")
 # The end of a statement before a match, through the whitespace that follows it.
@@ -48,10 +45,39 @@ _STATEMENT_END = re.compile(rf"(?P<stop>[.!?][{_CLOSERS}]*)(?=\s|\Z)|\n[ \t]*\n"
 _WHITESPACE = re.compile(r"\s+")
 
 
-def phrase_pattern(tokens: Sequence[str]) -> re.Pattern[str]:
-    """Matches the tokens in order as whole words, separated by any whitespace."""
-    body = r"\s+".join(re.escape(token) for token in tokens)
-    return re.compile(rf"(?<!\w){body}(?!\w)", re.IGNORECASE)
+def find_phrases(
+    text: str, word_spans: Sequence[Span], terms: Sequence[str]
+) -> list[Span]:
+    """Every place `terms` occur in `text` one after another, as (start, end) offsets into
+    `text`, in order.
+
+    `word_spans` are where pg_search found the query's words in `text`, in order. It marks
+    every occurrence of every word, so an occurrence of the phrase is a run of spans that
+    spells `terms` in order with no other word between them. Punctuation between them is
+    ignored, as pg_search ignores it. Occurrences don't overlap: after one is found, the
+    search resumes past it.
+    """
+    size = len(terms)
+    found: list[Span] = []
+    if not size:
+        return found
+    i = 0
+    while i <= len(word_spans) - size:
+        run = word_spans[i : i + size]
+        spells_terms = all(
+            text[start:end].lower() == term
+            for (start, end), term in zip(run, terms, strict=True)
+        )
+        adjacent = not any(
+            _WORD_CHARACTER.search(text, previous_end, next_start)
+            for (_, previous_end), (next_start, _) in pairwise(run)
+        )
+        if spells_terms and adjacent:
+            found.append((run[0][0], run[-1][1]))
+            i += size
+        else:
+            i += 1
+    return found
 
 
 def snippet(text: str, start: int, end: int) -> tuple[str, int, int]:
@@ -93,138 +119,64 @@ def snippet(text: str, start: int, end: int) -> tuple[str, int, int]:
     return f"{lead}{before}{match}{after}{trail}", match_start, match_start + len(match)
 
 
-def bm25(
-    occurrences: int, page_length: int, matching_pages: int, stats: CorpusStats
-) -> float:
-    """
-    BM25 score of a page on which the phrase occurs `occurrences` times,
-    when it occurs on `matching_pages` of the corpus's pages.
-
-    It uses the Okapi BM25 Formula (see https://en.wikipedia.org/wiki/Okapi_BM25), with
-    the IDF that Lucene uses, which stays positive however common the phrase is:
-
-        score = IDF * tf * (k1 + 1) / (tf + k1 * (1 - b + b * L / L_avg))
-        IDF   = ln(1 + (N - df + 0.5) / (df + 0.5))
-
-    where
-        tf     `occurrences`: times the phrase occurs on this page
-        L      `page_length`: length of this page's text, in characters
-        L_avg  `stats.average_page_length`: mean page length across the corpus
-        N      `stats.pages`: pages in the corpus
-        df     `matching_pages`: pages on which the phrase occurs at least once
-        k1     BM25_K1: how quickly more occurrences stop adding to the score
-        b      BM25_B: how much page length counts against a page
-
-    The whole phrase is the one term, so IDF is the same for every page in a query and
-    only tf and L change the order. When L_avg is 0 (every page empty), L / L_avg is
-    taken as 1.
-    """
-    idf = math.log(1 + (stats.pages - matching_pages + 0.5) / (matching_pages + 0.5))
-    relative_length = (
-        page_length / stats.average_page_length if stats.average_page_length else 1
-    )
-    saturation = BM25_K1 * (1 - BM25_B + BM25_B * relative_length)
-    return idf * occurrences * (BM25_K1 + 1) / (occurrences + saturation)
-
-
-# An occurrence: its page, where it starts and ends in the page's text, and its score.
-Occurrence = tuple[Page, int, int, float | None]
-
-
 class SearchService:
-    def __init__(self, repository: SearchRepository, *, ranking: bool = False) -> None:
+    def __init__(
+        self, repository: SearchRepository, *, archive_org_base_url: str
+    ) -> None:
         self._repository = repository
-        self._ranking = ranking
+        self._archive_org_base_url = archive_org_base_url.rstrip("/")
 
     async def search(self, query: str, limit: int, offset: int) -> SearchResponse:
-        """Every occurrence of `query`, with `limit` of them from `offset`: in corpus order,
-        or by relevance when ranking is on.
-
-        Logic:
-        - Split search query into tokens
-        -  SQL filters to pages containing every word
-        - Then the regex matches the exact phrase.
-        - Aggregate documents containing tokens
-        - Rank documents by relevance with bm25 if ranking is turned on
-        - Return occurrences and metadata in search response
-
-        """
-        tokens = query.split()
-
-        matches: list[tuple[Page, list[re.Match[str]]]] = []
-        if tokens:
-            phrase = phrase_pattern(
-                tokens
-            )  # equivalent of what phraseto_ts_query in Postgres would do
-
-            # Find all pages containing of the search tokens in the database
-            # Perform regex match for the search phrase
-            # Add the page and matched phrases to the matches list
-            for page in await self._repository.find_pages_containing(tokens):
-                if found := list(phrase.finditer(page.text)):
-                    matches.append((page, found))
-
-        order: Order = "corpus"
-        occurrences: list[Occurrence]
-        if self._ranking:
-            order = "relevance"
-            occurrences = await self._ranked(matches)
-        else:
-            occurrences = [
-                (page, m.start(), m.end(), None)
-                for page, found in matches
-                for m in found
-            ]
+        """The passages containing `query` as a phrase, most relevant first, `limit` of them
+        from `offset`, each cited with a snippet around every occurrence of the phrase."""
+        terms = await self._repository.query_terms(query)
+        total = 0
+        matches: list[PassageMatch] = []
+        # A query with no words (only punctuation) can match nothing,
+        # so we skip the count and the search.
+        if terms:
+            total = await self._repository.count_passages(query)
+            if offset < total:
+                matches = await self._repository.find_passages(query, limit, offset)
         return SearchResponse(
             query=query,
-            order=order,
-            total=len(occurrences),
+            total=total,
             limit=limit,
             offset=offset,
-            results=[
-                _hit(*occurrence) for occurrence in occurrences[offset : offset + limit]
-            ],
+            results=[self._hit(match, terms) for match in matches],
         )
 
-    async def _ranked(
-        self, matches: list[tuple[Page, list[re.Match[str]]]]
-    ) -> list[Occurrence]:
-        """The occurrences, highest-scoring page first. The sort is stable, so pages with
-        equal scores, and occurrences on the same page, stay in corpus order."""
-        if not matches:
-            return []
-        stats = await self._repository.get_corpus_stats()
-        scored = [
-            (page, found, bm25(len(found), len(page.text), len(matches), stats))
-            for page, found in matches
+    def _hit(self, match: PassageMatch, terms: Sequence[str]) -> SearchHit:
+        found = find_phrases(match.search_text, match.word_spans, terms)
+        if not found:
+            # The index matched the passage, but its word positions don't spell the phrase.
+            # Cite the start of the passage rather than drop the result.
+            logger.warning(
+                "search match not located in passage",
+                extra={"identifier": match.identifier, "leaf": match.leaf},
+            )
+            found = [(0, 0)]
+        snippets = [
+            Snippet(text=text, match_start=match_start, match_end=match_end)
+            for text, match_start, match_end in (
+                snippet(match.search_text, start, end) for start, end in found
+            )
         ]
-        scored.sort(key=lambda entry: entry[2], reverse=True)
-        return [
-            (page, m.start(), m.end(), round(score, 4))
-            for page, found, score in scored
-            for m in found
-        ]
-
-
-def _hit(page: Page, start: int, end: int, score: float | None) -> SearchHit:
-    document = page.document
-    text, match_start, match_end = snippet(page.text, start, end)
-    return SearchHit(
-        document=DocumentCitation(
-            identifier=document.identifier,
-            title=document.title,
-            publication_date=document.publication_date,
-            volume=document.volume,
-            issue=document.issue,
-            source_url=document.source_url,
-        ),
-        page=PageCitation(
-            leaf_number=page.leaf_number,
-            page_number=page.page_number,
-            url=f"{document.source_url.rstrip('/')}/page/n{page.leaf_number}",
-        ),
-        snippet=text,
-        match_start=match_start,
-        match_end=match_end,
-        score=score,
-    )
+        source_url = f"{self._archive_org_base_url}/details/{match.identifier}"
+        return SearchHit(
+            document=DocumentCitation(
+                identifier=match.identifier,
+                title=match.title,
+                publication_date=match.issue_date,
+                volume=match.volume,
+                issue=match.issue,
+                source_url=source_url,
+            ),
+            page=PageCitation(
+                leaf_number=match.leaf,
+                page_number=match.printed_page,
+                url=f"{source_url}/page/n{match.leaf}",
+            ),
+            snippets=snippets,
+            score=round(match.score, 4),
+        )

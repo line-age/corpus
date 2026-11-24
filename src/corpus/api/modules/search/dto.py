@@ -1,7 +1,7 @@
 """Request and response models for the search API."""
 
 from datetime import date
-from typing import Annotated, Literal
+from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, Field, StringConstraints
 
@@ -50,32 +50,34 @@ class PageCitation(BaseModel):
     """Link to this page of the scan."""
 
 
+class Snippet(BaseModel):
+    """One occurrence of the query in a passage, with the statement that contains it."""
+
+    text: str
+    """The statement containing the match, whitespace collapsed; "..." marks a cut."""
+    match_start: int
+    """Offset in `text` where the matched text starts."""
+    match_end: int
+    """Offset in `text` just past the matched text."""
+
+
 class SearchHit(BaseModel):
-    """One occurrence of the query, with the statement that contains it."""
+    """One passage containing the query, with a snippet for each occurrence of it."""
 
     document: DocumentCitation
     page: PageCitation
-    snippet: str
-    """The sentence containing the match, whitespace collapsed; "..." marks a cut."""
-    match_start: int
-    """Offset in `snippet` where the matched text starts."""
-    match_end: int
-    """Offset in `snippet` just past the matched text."""
-    score: float | None
-    """Relevance of the result's page to the query (BM25); higher is more relevant.
-    Null when results are in corpus order."""
-
-
-Order = Literal["corpus", "relevance"]
+    snippets: list[Snippet]
+    """One per occurrence of the query in the passage, in the order they occur. Two
+    occurrences in one statement give two snippets with the same `text`."""
+    score: float
+    """Relevance of the passage to the query (BM25); higher is more relevant. Results are
+    ordered by it, highest first."""
 
 
 class SearchResponse(BaseModel):
     query: str
-    order: Order
-    """How `results` are ordered: "corpus" is by publication date, document, page and
-    position on the page; "relevance" is by score, highest first, then corpus order."""
     total: int
-    """Every occurrence of the query, not only those in `results`."""
+    """Every passage containing the query, not only those in `results`."""
     limit: int
     offset: int
     results: list[SearchHit]
